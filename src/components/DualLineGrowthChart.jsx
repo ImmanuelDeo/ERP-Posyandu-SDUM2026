@@ -169,7 +169,7 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
     const childPolyline = childPoints.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
 
     return (
-      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-warm-card space-y-3">
+      <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-warm-card space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <div className="flex items-center gap-1.5">
@@ -352,7 +352,7 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
     const childPolyline = childPoints.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
 
     return (
-      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-warm-card space-y-3">
+      <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-warm-card space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <div className="flex items-center gap-1.5">
@@ -473,11 +473,11 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
   };
 
   return (
-    <div className="space-y-3.5">
+    <div className="space-y-5">
       {/* Grid 4 Metrik Fisik (BB dengan GRAM, TB, LK, LiLA) */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {/* 1. Berat Badan (BB) - Kenaikan dlm SATUAN GRAM */}
-        <div className="bg-white p-3.5 rounded-2xl border border-teal-200/80 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-teal-200/80 shadow-xs flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider flex items-center gap-1">
               <Scale className="w-3.5 h-3.5 text-teal-600" />
@@ -501,7 +501,7 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
         </div>
 
         {/* 2. Tinggi Badan (TB) */}
-        <div className="bg-white p-3.5 rounded-2xl border border-blue-200/80 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-blue-200/80 shadow-xs flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold text-blue-800 uppercase tracking-wider flex items-center gap-1">
               <Ruler className="w-3.5 h-3.5 text-blue-600" />
@@ -524,7 +524,7 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
         </div>
 
         {/* 3. Lingkar Kepala (LK) */}
-        <div className="bg-white p-3.5 rounded-2xl border border-emerald-200/80 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-emerald-200/80 shadow-xs flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1">
               <CircleDot className="w-3.5 h-3.5 text-emerald-600" />
@@ -547,7 +547,7 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
         </div>
 
         {/* 4. Lingkar Lengan (LiLA) */}
-        <div className="bg-white p-3.5 rounded-2xl border border-purple-200/80 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-purple-200/80 shadow-xs flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold text-purple-800 uppercase tracking-wider flex items-center gap-1">
               <TrendingUp className="w-3.5 h-3.5 text-purple-600" />
@@ -571,7 +571,7 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
       </div>
 
       {/* Evaluasi Status Kenaikan KMS (KBM Alert Kemenkes RI dlm GRAM) */}
-      <div className={`p-3 rounded-2xl border flex items-center justify-between text-xs font-semibold ${growthEval.bg} ${growthEval.color}`}>
+      <div className={`p-4 rounded-3xl border flex items-center justify-between text-xs sm:text-sm font-semibold gap-3 ${growthEval.bg} ${growthEval.color}`}>
         <div className="flex items-center gap-2">
           <TrendingUp className="w-4 h-4 flex-shrink-0" />
           <div>
@@ -585,11 +585,11 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
       </div>
 
       {/* 3. REVISI PERMINTAAN 3: TAB SWITCHER HANYA 2 PILIHAN (BB VS TB), LEGA & PROPORSIONAL */}
-      <div className="bg-slate-100 p-1.5 rounded-2xl flex gap-2 text-xs sm:text-sm font-bold shadow-2xs">
+      <div className="bg-slate-100 p-1.5 rounded-2xl flex gap-2.5 text-xs sm:text-sm font-bold shadow-2xs">
         <button
           type="button"
           onClick={() => setActiveTab('bb')}
-          className={`flex-1 py-3 px-4 rounded-xl transition-all duration-150 flex items-center justify-center gap-2.5 ${
+          className={`flex-1 py-3 px-5 rounded-xl transition-all duration-150 flex items-center justify-center gap-2.5 ${
             activeTab === 'bb'
               ? 'bg-teal-700 text-white shadow-sm'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
@@ -602,7 +602,7 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
         <button
           type="button"
           onClick={() => setActiveTab('tb')}
-          className={`flex-1 py-3 px-4 rounded-xl transition-all duration-150 flex items-center justify-center gap-2.5 ${
+          className={`flex-1 py-3 px-5 rounded-xl transition-all duration-150 flex items-center justify-center gap-2.5 ${
             activeTab === 'tb'
               ? 'bg-blue-600 text-white shadow-sm'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
