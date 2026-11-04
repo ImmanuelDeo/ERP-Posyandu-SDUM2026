@@ -101,12 +101,12 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
     );
   };
 
-  // Helper badge selisih Berat Badan (KHUSUS GRAM)
+  // Helper badge selisih Berat Badan (KHUSUS GRAM - Teks Bersih Seragam)
   const renderBBGramBadge = () => {
     if (!prev) return <span className="text-[10px] text-slate-400 font-medium">Awal</span>;
     if (diffBBGram > 0) {
       return (
-        <span className="text-[11px] font-black text-emerald-700 flex items-center gap-0.5 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+        <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-0.5">
           <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.75]" />
           <span>+{diffBBGram} gram</span>
         </span>
@@ -114,14 +114,14 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
     }
     if (diffBBGram < 0) {
       return (
-        <span className="text-[11px] font-black text-rose-700 flex items-center gap-0.5 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+        <span className="text-[11px] font-bold text-rose-600 flex items-center gap-0.5">
           <ArrowDownRight className="w-3.5 h-3.5 stroke-[2.75]" />
           <span>{diffBBGram} gram</span>
         </span>
       );
     }
     return (
-      <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 flex items-center gap-0.5">
+      <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200 flex items-center gap-0.5">
         <Minus className="w-3 h-3 stroke-[2.5]" />
         <span>0 gram (Tetap)</span>
       </span>
