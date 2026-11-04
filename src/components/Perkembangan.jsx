@@ -48,7 +48,7 @@ export default function Perkembangan({ initialChildId }) {
   const prev = history.length > 1 ? history[history.length - 2] : null;
 
   return (
-    <section className="space-y-4" id="perkembangan">
+    <section className="space-y-6" id="perkembangan">
       {/* Grid 2 Kolom di Tablet & Desktop (>= lg) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-start">
         {/* KOLOM KIRI: Selector, Profil Balita & Grafik Dual Line TB & BB */}
