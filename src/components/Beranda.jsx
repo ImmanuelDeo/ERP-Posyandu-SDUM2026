@@ -53,13 +53,13 @@ export default function Beranda() {
         </div>
       </div>
 
-      {/* 4 Metric Cards Grid - Fully Responsive */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
+      {/* 4 Metric Cards Grid - Fully Responsive & Aligned */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5 items-stretch">
         <MetricCard
           title="Total Balita"
           value={total}
           unit="Anak"
-          subtitle="Terdaftar resmi di posyandu"
+          subtitle="Total Balita Terdaftar"
           icon={<Users className="w-4 h-4" />}
           iconBg="bg-teal-50"
           iconColor="text-teal-700"
@@ -68,7 +68,7 @@ export default function Beranda() {
           title="Sudah Diperiksa"
           value={weighedCount}
           unit="Anak"
-          subtitle={`${weighedPct}% Selesai Ditimbang`}
+          subtitle={`${weighedPct}% Ditimbang`}
           icon={<CheckCircle2 className="w-4 h-4" />}
           iconBg="bg-emerald-50"
           iconColor="text-emerald-700"
@@ -79,17 +79,18 @@ export default function Beranda() {
           title="Belum Hadir"
           value={unweighedCount}
           unit="Anak"
-          subtitle="Perlu jadwal susulan"
+          subtitle="Jadwal Susulan"
           icon={<AlertCircle className="w-4 h-4" />}
           iconBg="bg-amber-50"
           iconColor="text-amber-700"
           valueColor="text-amber-600"
+          isWarningSubtitle
         />
         <MetricCard
           title="Rata-rata Usia"
           value="18.2"
           unit="Bulan"
-          subtitle="Rentang sasaran (0-5 thn)"
+          subtitle="Sasaran 0-5 Tahun"
           icon={<Calendar className="w-4 h-4" />}
           iconBg="bg-blue-50"
           iconColor="text-blue-700"
@@ -222,21 +223,38 @@ export default function Beranda() {
   );
 }
 
-function MetricCard({ title, value, unit, subtitle, icon, iconBg, iconColor, valueColor = "text-slate-900", highlightSubtitle }) {
+function MetricCard({ title, value, unit, subtitle, icon, iconBg, iconColor, valueColor = "text-slate-900", highlightSubtitle, isWarningSubtitle }) {
   return (
-    <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col justify-between transition hover:shadow-sm">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-slate-500 tracking-wide">{title}</span>
-        <span className={`p-1.5 ${iconBg} ${iconColor} rounded-xl`}>{icon}</span>
+    <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col justify-between transition hover:shadow-sm min-h-[142px]">
+      {/* Header: Title + Icon Sejajar */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-bold text-slate-500 tracking-wide truncate">{title}</span>
+        <span className={`p-1.5 ${iconBg} ${iconColor} rounded-xl flex-shrink-0 shadow-2xs`}>{icon}</span>
       </div>
-      <div className="mt-2">
-        <div className="flex items-baseline gap-1">
-          <span className={`text-2xl sm:text-3xl font-black tracking-tight ${valueColor}`}>{value}</span>
-          {unit && <span className="text-xs text-slate-400 font-medium">{unit}</span>}
+
+      {/* Nilai Utama Besar */}
+      <div className="my-1.5">
+        <div className="flex items-baseline gap-1.5">
+          <span className={`text-2xl sm:text-3xl font-black tracking-tight leading-none ${valueColor}`}>{value}</span>
+          {unit && <span className="text-xs text-slate-400 font-bold">{unit}</span>}
         </div>
-        <p className={`text-[11px] mt-1 line-clamp-1 ${highlightSubtitle ? 'text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded-md inline-block' : 'text-slate-400 font-medium'}`}>
-          {subtitle}
-        </p>
+      </div>
+
+      {/* Footer Pill Status yang Rapi & Sejajar di Semua Card */}
+      <div className="pt-2 border-t border-slate-100 flex items-center min-h-[28px]">
+        {highlightSubtitle ? (
+          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80 whitespace-nowrap">
+            {subtitle}
+          </span>
+        ) : isWarningSubtitle ? (
+          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/80 whitespace-nowrap">
+            {subtitle}
+          </span>
+        ) : (
+          <span className="text-[10px] font-semibold text-slate-500 truncate" title={subtitle}>
+            {subtitle}
+          </span>
+        )}
       </div>
     </div>
   );
