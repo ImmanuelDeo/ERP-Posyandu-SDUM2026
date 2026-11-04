@@ -256,27 +256,27 @@ export default function EnterPage({
   };
 
   // =========================================================================
-  // STEP 1: WELCOME SCREEN (WARM PAPER, EDITORIAL TYPO, CROPPED BLEED HERO)
+  // STEP 1: WELCOME SCREEN (WARM PAPER, EDITORIAL TYPO, ADAPTIVE DESKTOP/MOBILE)
   // =========================================================================
   if (step === 1) {
     return (
       <div className="min-h-screen w-full bg-[#FCF9F4] text-slate-800 flex flex-col justify-between relative overflow-hidden select-none">
-        {/* Soft Background Washes menyatu sampai bawah */}
+        {/* Soft Background Washes */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -top-20 -left-20 h-80 w-80 rounded-full bg-teal-200/40 blur-3xl"
+          className="pointer-events-none absolute -top-20 -left-20 h-96 w-96 rounded-full bg-teal-200/40 blur-3xl"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute top-40 -right-20 h-80 w-80 rounded-full bg-amber-200/40 blur-3xl"
+          className="pointer-events-none absolute top-40 -right-20 h-96 w-96 rounded-full bg-amber-200/40 blur-3xl"
         />
         <div
           aria-hidden="true"
           className="pointer-events-none absolute bottom-0 left-0 right-0 h-96 bg-gradient-to-t from-teal-100/60 via-amber-100/30 to-transparent blur-2xl"
         />
 
-        {/* Ilustrasi Mentok Pojok Kiri Bawah Nempel Bawah */}
-        <div className="absolute left-0 bottom-0 w-[420px] sm:w-[460px] h-[520px] sm:h-[580px] pointer-events-none z-0 overflow-hidden rounded-tr-[200px]">
+        {/* Ilustrasi Mentok Pojok Kiri Bawah KHUSUS Mobile (< md) */}
+        <div className="md:hidden absolute left-0 bottom-0 w-[420px] sm:w-[460px] h-[520px] pointer-events-none z-0 overflow-hidden rounded-tr-[200px]">
           {!step1ImgFailed ? (
             <img
               src="/ilustrasi-first-enter-page.jpg"
@@ -287,59 +287,84 @@ export default function EnterPage({
           ) : (
             <Step1FallbackIllustration />
           )}
-          {/* Halus fade ke kanan dan atas agar teks header dan tombol tetap kontras & terbaca jelas */}
           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-[#FCF9F4]/10 to-[#FCF9F4]/75" />
           <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#FCF9F4]/80 via-transparent to-transparent" />
         </div>
 
-        {/* Kontainer Utama Mobile-First */}
-        <div className="relative z-10 mx-auto w-full max-w-[430px] flex-1 flex flex-col justify-between px-5 pt-8 pb-6">
-          {/* BAGIAN ATAS: Rata Kiri, Editorial & Humanist - Dibuat Lebih ke Bawah & Teks Lebih Besar */}
-          <header className="text-left pt-2 sm:pt-4">
-            {/* Pill Badge */}
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-teal-700/15 bg-teal-50/90 px-3.5 py-1 text-xs font-bold tracking-wider text-teal-800 uppercase shadow-xs mb-3.5">
-              <Sparkles className="h-3.5 w-3.5 text-teal-600" />
-              <span>Posyandu Digital • Purwokerto</span>
+        {/* Kontainer Utama Adaptif: Mobile (< md) tetap vertikal 430px, Tablet & Desktop (>= md) melebar proporsional dalam grid 2 kolom */}
+        <div className="relative z-10 mx-auto w-full max-w-[430px] md:max-w-5xl lg:max-w-6xl flex-1 flex flex-col md:flex-row md:items-center md:justify-between px-5 md:px-10 pt-8 pb-6 gap-8">
+          {/* Kolom Kiri: Header Editorial, Sub-header, Deskripsi & Tombol CTA */}
+          <div className="flex-1 flex flex-col justify-between md:justify-center md:space-y-6 text-left pt-2 sm:pt-4">
+            <header className="space-y-3">
+              {/* Pill Badge */}
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-teal-700/15 bg-teal-50/90 px-3.5 py-1 text-xs font-bold tracking-wider text-teal-800 uppercase shadow-xs">
+                <Sparkles className="h-3.5 w-3.5 text-teal-600" />
+                <span>Posyandu Digital • Purwokerto</span>
+              </div>
+
+              {/* Sub-header & Judul Utama Fraunces */}
+              <div>
+                <p className="text-base md:text-lg font-semibold text-teal-700 tracking-wide uppercase">
+                  Selamat Datang di
+                </p>
+                <h1 className="font-serif text-[34px] sm:text-[38px] md:text-[46px] lg:text-[52px] leading-[1.12] font-bold text-teal-950 mt-1">
+                  ERP Posyandu Terpadu
+                </h1>
+              </div>
+
+              {/* Deskripsi Sistem */}
+              <p className="text-[15px] sm:text-[16px] md:text-[18px] leading-relaxed text-slate-600 max-w-md md:max-w-lg">
+                Sistem terintegrasi multi-posyandu dengan pemantauan fisik balita dan isolasi data aman per stand posyandu.
+              </p>
+            </header>
+
+            {/* Tombol CTA di Mobile & Desktop */}
+            <div className="space-y-3 pt-6 md:pt-2 max-w-md">
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenLogin) {
+                    onOpenLogin();
+                  } else {
+                    setStep(2);
+                  }
+                }}
+                className="w-full min-h-[56px] rounded-full bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-500 hover:from-teal-800 hover:to-emerald-600 active:scale-[0.99] text-white font-bold text-[17px] md:text-[18px] px-8 py-4 shadow-teal-cta transition-all flex items-center justify-center gap-2.5 group backdrop-blur-xs"
+              >
+                <span>Mulai Sekarang</span>
+                <ArrowRight className="h-5 w-5 stroke-[2.75] transition-transform group-hover:translate-x-1" />
+              </button>
+
+              <p className="text-center md:text-left text-[12px] font-medium text-slate-500">
+                Teknologi Multi-Tenant ERP Cloud • Sains Data Telkom University
+              </p>
             </div>
+          </div>
 
-            {/* Sub-header & Judul Utama Fraunces - Lebih Besar */}
-            <p className="text-base font-semibold text-teal-700 tracking-wide uppercase">
-              Selamat Datang di
-            </p>
-            <h1 className="font-serif text-[34px] sm:text-[38px] leading-[1.12] font-bold text-teal-950 mt-1">
-              ERP Posyandu Terpadu
-            </h1>
-
-            {/* Deskripsi Sistem - Sedikit Lebih Besar & Geser ke Bawah Sedikit */}
-            <p className="mt-3 text-[15px] sm:text-[16px] leading-relaxed text-slate-600 max-w-sm">
-              Sistem terintegrasi multi-posyandu dengan isolasi data aman per tenant.
-            </p>
-          </header>
-
-          {/* Spacer Tengah */}
-          <div className="flex-1 min-h-[140px]" />
-
-          {/* BAGIAN BAWAH: Tombol Pill Penuh "Mulai Sekarang →" (Di Depan Ilustrasi) */}
-          <footer className="space-y-3 pt-3 relative z-10">
-            <button
-              type="button"
-              onClick={() => {
-                if (onOpenLogin) {
-                  onOpenLogin();
-                } else {
-                  setStep(2);
-                }
-              }}
-              className="w-full min-h-[56px] rounded-full bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-500 hover:from-teal-800 hover:to-emerald-600 active:scale-[0.99] text-white font-bold text-[17px] px-6 py-3.5 shadow-teal-cta transition-all flex items-center justify-center gap-2.5 group backdrop-blur-xs"
-            >
-              <span>Mulai Sekarang</span>
-              <ArrowRight className="h-5 w-5 stroke-[2.75] transition-transform group-hover:translate-x-1" />
-            </button>
-
-            <p className="text-center text-[12px] font-medium text-slate-500">
-              Teknologi Multi-Tenant ERP Cloud • Sains Data Telkom University
-            </p>
-          </footer>
+          {/* Kolom Kanan: Ilustrasi Artistik Terbingkai Lengkung KHUSUS Tablet & Desktop (>= md) */}
+          <div className="hidden md:flex flex-1 items-center justify-center relative">
+            <div className="relative w-full max-w-[440px] lg:max-w-[480px] h-[480px] lg:h-[540px] rounded-[48px] overflow-hidden border-2 border-teal-600/20 shadow-2xl bg-gradient-to-br from-[#FFF9F0] via-[#E6F7F4] to-[#FCF9F4] p-2">
+              <div className="w-full h-full rounded-[40px] overflow-hidden relative">
+                {!step1ImgFailed ? (
+                  <img
+                    src="/ilustrasi-first-enter-page.jpg"
+                    alt="Ilustrasi Ibu Kader dan Balita Posyandu"
+                    onError={() => setStep1ImgFailed(true)}
+                    className="w-full h-full object-cover object-center scale-105"
+                  />
+                ) : (
+                  <Step1FallbackIllustration />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-teal-900/40 via-transparent to-transparent pointer-events-none" />
+                <div className="absolute bottom-5 inset-x-5 bg-white/90 backdrop-blur-md p-3.5 rounded-2xl border border-white/40 shadow-sm text-xs font-bold text-teal-950 flex items-center justify-between">
+                  <span>Pelayanan Rutin Posyandu</span>
+                  <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 text-[10px]">
+                    Banyumas 2026
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -350,10 +375,10 @@ export default function EnterPage({
   // =========================================================================
   return (
     <div className="min-h-screen w-full bg-[#FCF9F4] text-slate-800 flex flex-col justify-between relative overflow-x-hidden select-none">
-      {/* Kontainer Mobile Frame Maks 430px */}
-      <div className="mx-auto w-full max-w-[430px] flex-1 flex flex-col justify-between">
+      {/* Kontainer Adaptif Mobile & Desktop */}
+      <div className="mx-auto w-full max-w-[430px] md:max-w-4xl lg:max-w-5xl flex-1 flex flex-col justify-between">
         {/* DESAIN OBJECT MELENGKUNG (CURVED TEAL HEADER) */}
-        <section className="relative bg-gradient-to-b from-teal-800 via-teal-700 to-teal-600 text-white pt-5 pb-7 px-5 rounded-b-[42px] shadow-xl overflow-hidden">
+        <section className="relative bg-gradient-to-b from-teal-800 via-teal-700 to-teal-600 text-white pt-5 pb-7 px-5 md:px-8 rounded-b-[42px] shadow-xl overflow-hidden">
           {/* Subtle Decorative Pattern */}
           <div
             aria-hidden="true"
@@ -497,8 +522,8 @@ export default function EnterPage({
                   <span>{filteredPosyandu.length} Ditemukan</span>
                 </div>
 
-                {/* Daftar Kartu Tenant Posyandu */}
-                <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1 no-scrollbar" role="radiogroup">
+                {/* Daftar Kartu Tenant Posyandu - Grid 2 Kolom di Tablet/Desktop */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-[280px] overflow-y-auto pr-1 no-scrollbar" role="radiogroup">
                   {filteredPosyandu.map((item) => {
                     const isSelected = item.id === selectedPosyandu?.id;
                     return (

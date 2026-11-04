@@ -279,8 +279,8 @@ export default function BukuData({ onSelectChild }) {
         </button>
       </div>
 
-      {/* Child Cards List */}
-      <div className="space-y-2 pt-1">
+      {/* Child Cards List - Responsive Grid 1 / 2 / 3 Kolom */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
         {filteredChildren.length === 0 ? (
           <div className="bg-white p-6 rounded-2xl border border-slate-200 text-center text-slate-400 text-xs">
             Tidak ada balita yang sesuai dengan pencarian.

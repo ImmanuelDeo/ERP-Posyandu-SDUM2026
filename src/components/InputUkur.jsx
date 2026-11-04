@@ -73,7 +73,7 @@ export default function InputUkur({ onSuccess }) {
   };
 
   return (
-    <section className="space-y-3" id="input-ukur">
+    <section className="max-w-4xl w-full mx-auto space-y-4" id="input-ukur">
       {/* Banner Informasi Kader */}
       <div className="bg-emerald-50 border border-emerald-200/90 rounded-2xl p-3 flex items-center gap-2 text-xs text-emerald-900 shadow-xs">
         <AlertCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
@@ -84,37 +84,40 @@ export default function InputUkur({ onSuccess }) {
 
       {/* Form Input Selalu Aktif untuk Kader */}
       <form onSubmit={handleSubmit} className="space-y-3">
-        {/* Child Selection */}
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
-          <label className="block text-[11px] font-bold text-slate-800 uppercase tracking-wider">
-            Pilih Nama Balita:
-          </label>
-          <select
-            value={selectedChildId}
-            onChange={(e) => setSelectedChildId(e.target.value)}
-            required
-            className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs focus:outline-none focus:border-posyandu-600"
-          >
-            {tenant?.children?.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nama} (NIK: {c.nik ? c.nik.slice(-4) : '-'}) • {c.gender === 'L' ? 'L' : 'P'}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Child Selection & Exam Date - Responsive Grid 2 Kolom di Tablet/Desktop */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {/* Child Selection */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-1.5">
+            <label className="block text-[11px] font-bold text-slate-800 uppercase tracking-wider">
+              Pilih Nama Balita:
+            </label>
+            <select
+              value={selectedChildId}
+              onChange={(e) => setSelectedChildId(e.target.value)}
+              required
+              className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs focus:outline-none focus:border-posyandu-600"
+            >
+              {tenant?.children?.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nama} (NIK: {c.nik ? c.nik.slice(-4) : '-'}) • {c.gender === 'L' ? 'L' : 'P'}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {/* Exam Date */}
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
-          <label className="block text-[11px] font-bold text-slate-800 uppercase tracking-wider">
-            Tanggal Penimbangan:
-          </label>
-          <input
-            type="date"
-            value={examDate}
-            onChange={(e) => setExamDate(e.target.value)}
-            required
-            className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs focus:outline-none focus:border-posyandu-600"
-          />
+          {/* Exam Date */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-1.5">
+            <label className="block text-[11px] font-bold text-slate-800 uppercase tracking-wider">
+              Tanggal Penimbangan:
+            </label>
+            <input
+              type="date"
+              value={examDate}
+              onChange={(e) => setExamDate(e.target.value)}
+              required
+              className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs focus:outline-none focus:border-posyandu-600"
+            />
+          </div>
         </div>
 
         {/* 4 Physical Variables (Numeric Keypad on mobile) */}
@@ -123,7 +126,7 @@ export default function InputUkur({ onSuccess }) {
             Input Data Fisik (Keypad Numeric):
           </h3>
 
-          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
               <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">
                 Berat Badan (kg)

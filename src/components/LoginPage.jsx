@@ -153,7 +153,7 @@ export default function LoginPage({ onAdminLoginSuccess, onOrtuLoginSuccess, onB
         className="pointer-events-none absolute top-48 -right-24 h-80 w-80 rounded-full bg-amber-200/40 blur-3xl"
       />
 
-      <div className="relative z-10 max-w-md w-full mx-auto my-auto space-y-4">
+      <div className="relative z-10 max-w-md sm:max-w-xl md:max-w-2xl w-full mx-auto my-auto space-y-4">
         {/* Tombol Kembali ke Welcome Page */}
         {onBackToWelcome && (
           <button
@@ -319,40 +319,42 @@ export default function LoginPage({ onAdminLoginSuccess, onOrtuLoginSuccess, onB
               </p>
             </div>
 
-            <div>
-              <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Nama Ibu:
-              </label>
-              <div className="relative">
-                <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="text"
-                  required
-                  value={parentName}
-                  onChange={(e) => setParentName(e.target.value)}
-                  placeholder="Contoh: Siti Aminah"
-                  className="w-full h-11 pl-10 pr-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal-600 placeholder:text-slate-400"
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Nama Ibu:
+                </label>
+                <div className="relative">
+                  <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    required
+                    value={parentName}
+                    onChange={(e) => setParentName(e.target.value)}
+                    placeholder="Contoh: Siti Aminah"
+                    className="w-full h-11 pl-10 pr-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal-600 placeholder:text-slate-400"
+                  />
+                </div>
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  * Cukup nama saja (tanpa "Ibu").
+                </span>
               </div>
-              <span className="text-[10px] text-slate-400 mt-0.5 block">
-                * Cukup ketik nama saja (tidak perlu menulis "Ibu" di depannya).
-              </span>
-            </div>
 
-            <div>
-              <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Nama Lengkap Balita:
-              </label>
-              <div className="relative">
-                <Baby className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="text"
-                  required
-                  value={childName}
-                  onChange={(e) => setChildName(e.target.value)}
-                  placeholder="Contoh: Muhammad Al Fatih"
-                  className="w-full h-11 pl-10 pr-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal-600 placeholder:text-slate-400"
-                />
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Nama Lengkap Balita:
+                </label>
+                <div className="relative">
+                  <Baby className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    required
+                    value={childName}
+                    onChange={(e) => setChildName(e.target.value)}
+                    placeholder="Contoh: Muhammad Al Fatih"
+                    className="w-full h-11 pl-10 pr-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal-600 placeholder:text-slate-400"
+                  />
+                </div>
               </div>
             </div>
 
