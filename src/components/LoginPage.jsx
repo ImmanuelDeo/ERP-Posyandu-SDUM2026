@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import {
   Baby,
-  Building2,
+  Shield,
   Lock,
   User,
   Calendar,
@@ -15,73 +15,48 @@ import { useAuth } from '../context/AuthContext';
 
 /**
  * Halaman Login Terpadu:
- * 1. Tab Admin / Kader Cabang Posyandu: Username & Password per cabang/stand
- * 2. Tab Orang Tua: Nama Ibu, Nama Anak, dan Tanggal Lahir Anak
+ * 1. Login Admin: Menggunakan Username & Password (dummy). Setelah sukses -> diarahkan ke Pemilihan Posyandu/Stand.
+ * 2. Login Orang Tua: Menggunakan Nama Ibu, Nama Anak, dan Tanggal Lahir Anak (dummy). Setelah sukses -> langsung ke Interface Data Anaknya.
  */
 export default function LoginPage({ onAdminLoginSuccess, onOrtuLoginSuccess, onBackToWelcome }) {
   const { db } = useAuth();
-  const [activeRole, setActiveRole] = useState('kader'); // 'kader' | 'ortu'
+  const [activeTab, setActiveTab] = useState('admin'); // 'admin' | 'ortu'
 
-  // Form State Admin/Kader
-  const [selectedBranch, setSelectedBranch] = useState(
-    db ? Object.keys(db)[0] || 'arca' : 'arca'
-  );
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  // State Form Admin
+  const [adminUser, setAdminUser] = useState('');
+  const [adminPass, setAdminPass] = useState('');
   const [adminError, setAdminError] = useState('');
 
-  // Form State Orang Tua
+  // State Form Orang Tua
   const [parentName, setParentName] = useState('');
   const [childName, setChildName] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [ortuError, setOrtuError] = useState('');
 
-  // Handle Login Admin / Kader Posyandu
+  // 1. Submit Login Admin Posyandu
   const handleAdminSubmit = (e) => {
     e.preventDefault();
     setAdminError('');
 
-    if (!selectedBranch) {
-      setAdminError('Pilih cabang posyandu tempat Anda bertugas.');
-      return;
-    }
+    const u = adminUser.trim().toLowerCase();
+    const p = adminPass.trim();
 
-    const tenant = db?.[selectedBranch];
-    if (!tenant) {
-      setAdminError('Data posyandu tidak ditemukan.');
-      return;
-    }
+    // Dummy Credential Admin:
+    // User: "admin" / "kader", Password: "admin123" / "posyandu123" (atau password >= 4 karakter)
+    const isValidUser = u === 'admin' || u === 'kader' || u === 'admin_posyandu' || u === 'petugas';
+    const isValidPass = p === 'admin123' || p === 'posyandu123' || p === '123456' || p.length >= 4;
 
-    // Default Credential per Cabang:
-    // Username: admin_[id] atau nama posyandu, Password: [id]123 atau posyandu123
-    const validUsername = `admin_${selectedBranch}`;
-    const cleanUser = username.trim().toLowerCase();
-    const cleanPass = password.trim();
-
-    // Verifikasi fleksibel untuk kemudahan kader lapangan
-    const isUserMatch =
-      cleanUser === validUsername ||
-      cleanUser === selectedBranch.toLowerCase() ||
-      cleanUser === tenant.title.toLowerCase().replace(/\s+/g, '') ||
-      cleanUser === 'admin';
-
-    const isPassMatch =
-      cleanPass === `${selectedBranch}123` ||
-      cleanPass === 'posyandu123' ||
-      cleanPass === 'admin123' ||
-      cleanPass.length >= 4;
-
-    if (!isUserMatch || !isPassMatch) {
-      setAdminError(`Username atau password salah. Coba: User: ${validUsername} | Pass: ${selectedBranch}123`);
+    if (!isValidUser || !isValidPass) {
+      setAdminError('Username atau Password Admin salah. Gunakan dummy: Username: admin | Password: admin123');
       return;
     }
 
     if (onAdminLoginSuccess) {
-      onAdminLoginSuccess(selectedBranch);
+      onAdminLoginSuccess();
     }
   };
 
-  // Handle Login Orang Tua (Identifikasi: Nama Ortu, Nama Anak, Tgl Lahir)
+  // 2. Submit Login Orang Tua
   const handleOrtuSubmit = (e) => {
     e.preventDefault();
     setOrtuError('');
@@ -91,11 +66,11 @@ export default function LoginPage({ onAdminLoginSuccess, onOrtuLoginSuccess, onB
     const cleanDate = birthDate.trim();
 
     if (!cleanParent || !cleanChild || !cleanDate) {
-      setOrtuError('Mohon isi lengkap nama orang tua, nama anak, dan tanggal lahir anak.');
+      setOrtuError('Mohon lengkapi Nama Ibu/Ortu, Nama Anak, dan Tanggal Lahir Anak.');
       return;
     }
 
-    // Cari anak di seluruh tenant database
+    // Cari anak di seluruh cabang posyandu yang ada di database
     let matchedChild = null;
     let matchedTenant = null;
 
@@ -124,7 +99,7 @@ export default function LoginPage({ onAdminLoginSuccess, onOrtuLoginSuccess, onB
 
     if (!matchedChild) {
       setOrtuError(
-        'Data tidak ditemukan. Pastikan nama ibu, nama anak, dan tanggal lahir sesuai dengan yang tercatat di posyandu.'
+        'Data tidak ditemukan. Pastikan nama ibu, nama anak, dan tanggal lahir sesuai dengan kartu posyandu.'
       );
       return;
     }
@@ -147,103 +122,94 @@ export default function LoginPage({ onAdminLoginSuccess, onOrtuLoginSuccess, onB
       />
 
       <div className="relative z-10 max-w-md w-full mx-auto my-auto space-y-4">
-        {/* Tombol Kembali ke Step 1 */}
+        {/* Tombol Kembali ke Welcome Page */}
         {onBackToWelcome && (
           <button
             type="button"
             onClick={onBackToWelcome}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-800 hover:text-teal-900 bg-white/80 border border-[#E8E2D5] px-3 py-1.5 rounded-full shadow-2xs transition"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-800 hover:text-teal-900 bg-white/80 border border-[#E8E2D5] px-3.5 py-1.5 rounded-full shadow-2xs transition active:scale-95"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Kembali ke Halaman Awal</span>
+            <span>Kembali</span>
           </button>
         )}
 
-        {/* Header Login */}
-        <div className="text-center pt-2">
-          <div className="w-12 h-12 rounded-2xl bg-teal-700 text-white flex items-center justify-center mx-auto mb-2 shadow-md shadow-teal-700/20">
+        {/* Header Branding Login */}
+        <div className="text-center pt-1">
+          <div className="w-12 h-12 rounded-2xl bg-teal-700 text-white flex items-center justify-center mx-auto mb-2.5 shadow-md shadow-teal-700/20">
             <HeartHandshake className="w-6 h-6 text-teal-200" />
           </div>
           <h1 className="font-serif text-2xl font-bold text-teal-950">
-            Masuk ke Sistem Posyandu
+            Autentikasi Sistem Posyandu
           </h1>
-          <p className="text-xs text-slate-600 mt-1 max-w-xs mx-auto">
-            Akses pendataan posyandu bagi kader atau pantau tumbuh kembang buah hati bagi orang tua.
+          <p className="text-xs text-slate-600 mt-1 max-w-xs mx-auto leading-relaxed">
+            Pilih jenis akun untuk masuk ke sistem posyandu dengan aman.
           </p>
         </div>
 
-        {/* Tab Switcher Role: Kader vs Orang Tua */}
-        <div className="bg-white p-1.5 rounded-2xl border border-[#E8E2D5] shadow-xs flex gap-1">
+        {/* Pilihan Tab Login: Login Admin vs Login Orang Tua */}
+        <div className="bg-white p-1.5 rounded-2xl border border-[#E8E2D5] shadow-xs flex gap-1.5">
           <button
             type="button"
-            onClick={() => setActiveRole('kader')}
-            className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition ${
-              activeRole === 'kader'
+            onClick={() => {
+              setActiveTab('admin');
+              setAdminError('');
+            }}
+            className={`flex-1 py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition ${
+              activeTab === 'admin'
                 ? 'bg-teal-700 text-white shadow-xs'
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Building2 className="w-4 h-4" />
-            <span>Kader / Posyandu</span>
+            <Shield className="w-4 h-4" />
+            <span>Login Admin / Kader</span>
           </button>
 
           <button
             type="button"
-            onClick={() => setActiveRole('ortu')}
-            className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition ${
-              activeRole === 'ortu'
+            onClick={() => {
+              setActiveTab('ortu');
+              setOrtuError('');
+            }}
+            className={`flex-1 py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition ${
+              activeTab === 'ortu'
                 ? 'bg-teal-700 text-white shadow-xs'
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <Baby className="w-4 h-4" />
-            <span>Orang Tua (Balita)</span>
+            <span>Login Orang Tua</span>
           </button>
         </div>
 
-        {/* FORM 1: LOGIN KADER / POSYANDU CABANG */}
-        {activeRole === 'kader' && (
+        {/* TAB 1: FORM LOGIN ADMIN / KADER POSYANDU */}
+        {activeTab === 'admin' && (
           <form
             onSubmit={handleAdminSubmit}
-            className="bg-white rounded-3xl border border-[#E8E2D5] p-5 shadow-warm-card space-y-3.5"
+            className="bg-white rounded-3xl border border-[#E8E2D5] p-5 sm:p-6 shadow-warm-card space-y-4"
           >
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                  Cabang Posyandu:
-                </label>
-                <span className="text-[10px] text-teal-700 font-bold">Multi-Tenant</span>
-              </div>
-              <select
-                value={selectedBranch}
-                onChange={(e) => {
-                  setSelectedBranch(e.target.value);
-                  setAdminError('');
-                }}
-                className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-teal-600"
-              >
-                {db &&
-                  Object.entries(db).map(([key, item]) => (
-                    <option key={key} value={key}>
-                      {item.title} ({item.district || 'Banyumas'})
-                    </option>
-                  ))}
-              </select>
+            <div className="border-b border-slate-100 pb-2.5">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-teal-800 block">
+                Akses Petugas Posyandu
+              </span>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Setelah login, Anda akan diarahkan ke pemilihan posyandu/stand tugas.
+              </p>
             </div>
 
             <div>
               <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Username Petugas:
+                Username Admin:
               </label>
               <div className="relative">
-                <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder={`Contoh: admin_${selectedBranch}`}
-                  className="w-full h-11 pl-9 pr-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal-600 placeholder:text-slate-400"
+                  value={adminUser}
+                  onChange={(e) => setAdminUser(e.target.value)}
+                  placeholder="Masukkan username admin..."
+                  className="w-full h-11 pl-10 pr-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal-600 placeholder:text-slate-400"
                 />
               </div>
             </div>
@@ -253,50 +219,60 @@ export default function LoginPage({ onAdminLoginSuccess, onOrtuLoginSuccess, onB
                 Password:
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="password"
                   required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Masukkan password cabang..."
-                  className="w-full h-11 pl-9 pr-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal-600 placeholder:text-slate-400"
+                  value={adminPass}
+                  onChange={(e) => setAdminPass(e.target.value)}
+                  placeholder="Masukkan password admin..."
+                  className="w-full h-11 pl-10 pr-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal-600 placeholder:text-slate-400"
                 />
               </div>
             </div>
 
             {/* Error Message */}
             {adminError && (
-              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-1.5">
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                 <span>{adminError}</span>
               </div>
             )}
 
-            {/* Hint Demo Helper */}
-            <div className="bg-teal-50/70 border border-teal-200/70 rounded-xl p-2.5 text-[11px] text-teal-900 space-y-0.5">
-              <span className="font-bold block">💡 Info Login Cepat:</span>
-              <span>User: <code className="font-mono font-bold">admin_{selectedBranch}</code> | Pass: <code className="font-mono font-bold">{selectedBranch}123</code></span>
+            {/* Dummy Credential Box */}
+            <div className="bg-teal-50/80 border border-teal-200/80 rounded-xl p-3 text-xs text-teal-950 space-y-1">
+              <span className="font-extrabold flex items-center gap-1 text-[11px] text-teal-800 uppercase">
+                <span>🔑 Akun Dummy Admin (Siap Pakai):</span>
+              </span>
+              <div className="text-[11px] space-y-0.5 font-medium">
+                <div>Username: <code className="font-mono font-bold bg-white px-1.5 py-0.2 rounded border border-teal-200">admin</code></div>
+                <div>Password: <code className="font-mono font-bold bg-white px-1.5 py-0.2 rounded border border-teal-200">admin123</code></div>
+              </div>
             </div>
 
             <button
               type="submit"
-              className="w-full min-h-[50px] rounded-2xl bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-600 hover:from-teal-800 hover:to-emerald-700 active:scale-[0.99] text-white font-bold text-sm px-4 py-3 shadow-teal-cta transition-all flex items-center justify-center gap-2"
+              className="w-full min-h-[52px] rounded-2xl bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-600 hover:from-teal-800 hover:to-emerald-700 active:scale-[0.99] text-white font-bold text-sm px-4 py-3 shadow-teal-cta transition-all flex items-center justify-center gap-2"
             >
-              <span>Masuk sebagai Kader Posyandu</span>
+              <span>Login Admin & Pilih Stand Posyandu</span>
               <ArrowRight className="w-4 h-4 stroke-[2.5]" />
             </button>
           </form>
         )}
 
-        {/* FORM 2: LOGIN KHUSUS ORANG TUA (VIEW ONLY) */}
-        {activeRole === 'ortu' && (
+        {/* TAB 2: FORM LOGIN ORANG TUA (LANGSUNG KE DATA ANAK) */}
+        {activeTab === 'ortu' && (
           <form
             onSubmit={handleOrtuSubmit}
-            className="bg-white rounded-3xl border border-[#E8E2D5] p-5 shadow-warm-card space-y-3.5"
+            className="bg-white rounded-3xl border border-[#E8E2D5] p-5 sm:p-6 shadow-warm-card space-y-4"
           >
-            <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-2.5 text-[11px] text-amber-900 leading-snug">
-              <strong>👶 Portal Buku KIA Digital:</strong> Masukkan nama orang tua, nama anak, dan tanggal lahir balita sesuai data pendaftaran posyandu untuk melihat grafik dan buku perkembangan anak.
+            <div className="border-b border-slate-100 pb-2.5">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-teal-800 block">
+                Buku KIA Digital Orang Tua
+              </span>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Masukkan data verifikasi balita. Setelah login berhasil, Anda langsung membuka grafik & rekam fisik anak.
+              </p>
             </div>
 
             <div>
@@ -304,14 +280,14 @@ export default function LoginPage({ onAdminLoginSuccess, onOrtuLoginSuccess, onB
                 Nama Ibu / Orang Tua:
               </label>
               <div className="relative">
-                <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   required
                   value={parentName}
                   onChange={(e) => setParentName(e.target.value)}
                   placeholder="Contoh: Ibu Siti Aminah"
-                  className="w-full h-11 pl-9 pr-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal-600 placeholder:text-slate-400"
+                  className="w-full h-11 pl-10 pr-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal-600 placeholder:text-slate-400"
                 />
               </div>
             </div>
@@ -321,14 +297,14 @@ export default function LoginPage({ onAdminLoginSuccess, onOrtuLoginSuccess, onB
                 Nama Lengkap Balita:
               </label>
               <div className="relative">
-                <Baby className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Baby className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   required
                   value={childName}
                   onChange={(e) => setChildName(e.target.value)}
                   placeholder="Contoh: Muhammad Al Fatih"
-                  className="w-full h-11 pl-9 pr-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal-600 placeholder:text-slate-400"
+                  className="w-full h-11 pl-10 pr-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal-600 placeholder:text-slate-400"
                 />
               </div>
             </div>
@@ -338,43 +314,49 @@ export default function LoginPage({ onAdminLoginSuccess, onOrtuLoginSuccess, onB
                 Tanggal Lahir Balita:
               </label>
               <div className="relative">
-                <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Calendar className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="date"
                   required
                   value={birthDate}
                   onChange={(e) => setBirthDate(e.target.value)}
-                  className="w-full h-11 pl-9 pr-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-teal-600"
+                  className="w-full h-11 pl-10 pr-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-teal-600"
                 />
               </div>
             </div>
 
             {/* Error Message */}
             {ortuError && (
-              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-1.5">
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                 <span>{ortuError}</span>
               </div>
             )}
 
-            {/* Contoh Demo Helper */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[10px] text-slate-600 space-y-0.5">
-              <span className="font-bold block text-slate-700">Contoh Data Uji Ortu:</span>
-              <span>Ibu: <strong>Ibu Siti Aminah</strong> | Anak: <strong>Muhammad Al Fatih</strong> | Lahir: <strong>2024-04-14</strong></span>
+            {/* Dummy Credential Ortu Box */}
+            <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-3 text-xs text-amber-950 space-y-1">
+              <span className="font-extrabold flex items-center gap-1 text-[11px] text-amber-800 uppercase">
+                <span>👶 Data Dummy Balita (Siap Pakai):</span>
+              </span>
+              <div className="text-[11px] space-y-0.5 font-medium text-slate-700">
+                <div>Ibu: <strong>Ibu Siti Aminah</strong></div>
+                <div>Anak: <strong>Muhammad Al Fatih</strong></div>
+                <div>Tgl Lahir: <code className="font-mono font-bold bg-white px-1.5 py-0.2 rounded border border-amber-200">2024-04-14</code></div>
+              </div>
             </div>
 
             <button
               type="submit"
-              className="w-full min-h-[50px] rounded-2xl bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-600 hover:from-teal-800 hover:to-emerald-700 active:scale-[0.99] text-white font-bold text-sm px-4 py-3 shadow-teal-cta transition-all flex items-center justify-center gap-2"
+              className="w-full min-h-[52px] rounded-2xl bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-600 hover:from-teal-800 hover:to-emerald-700 active:scale-[0.99] text-white font-bold text-sm px-4 py-3 shadow-teal-cta transition-all flex items-center justify-center gap-2"
             >
-              <span>Buka Rekam Kesehatan Anak</span>
+              <span>Buka Data Rekam Medis Anak</span>
               <ArrowRight className="w-4 h-4 stroke-[2.5]" />
             </button>
           </form>
         )}
 
         {/* Footer */}
-        <p className="text-center text-[11px] text-slate-500 pt-2">
+        <p className="text-center text-[11px] text-slate-500 pt-1">
           Teknologi Multi-Tenant ERP Cloud • Sains Data Telkom University
         </p>
       </div>

@@ -186,14 +186,16 @@ function Step2FallbackIllustration() {
 }
 
 export default function EnterPage({
+  initialStep = 1,
   posyanduList = DEFAULT_TENANTS,
   defaultSelectedId,
   onEnterPosyandu,
   onRegisterPosyandu,
   onOpenLogin,
+  onBackToWelcome,
 }) {
   // 2-Step Flow State: 1 = Welcome Screen, 2 = Tenant Selector Dashboard
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(initialStep);
   const [activeTab, setActiveTab] = useState('pilih'); // 'pilih' | 'panduan'
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -322,7 +324,13 @@ export default function EnterPage({
           <footer className="space-y-3 pt-3 relative z-10">
             <button
               type="button"
-              onClick={() => setStep(2)}
+              onClick={() => {
+                if (onOpenLogin) {
+                  onOpenLogin();
+                } else {
+                  setStep(2);
+                }
+              }}
               className="w-full min-h-[56px] rounded-full bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-500 hover:from-teal-800 hover:to-emerald-600 active:scale-[0.99] text-white font-bold text-[17px] px-6 py-3.5 shadow-teal-cta transition-all flex items-center justify-center gap-2.5 group backdrop-blur-xs"
             >
               <span>Mulai Sekarang</span>
@@ -372,10 +380,16 @@ export default function EnterPage({
           <div className="relative z-10 flex items-center justify-between gap-2 mb-4">
             <button
               type="button"
-              onClick={() => setStep(1)}
+              onClick={() => {
+                if (onBackToWelcome) {
+                  onBackToWelcome();
+                } else {
+                  setStep(1);
+                }
+              }}
               className="h-10 w-10 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-white flex items-center justify-center border border-white/25 transition shadow-xs"
-              title="Kembali ke Layar Awal"
-              aria-label="Kembali ke Langkah 1"
+              title="Kembali ke Menu Login"
+              aria-label="Kembali ke Menu Login"
             >
               <ArrowLeft className="h-5 w-5 stroke-[2.5]" />
             </button>
@@ -562,29 +576,12 @@ export default function EnterPage({
                 {/* Tombol Utama Masuk ke Posyandu Terpilih */}
                 <button
                   type="button"
-                  onClick={() => {
-                    if (onOpenLogin) {
-                      onOpenLogin('kader', selectedPosyandu?.id);
-                    } else {
-                      handleEnter();
-                    }
-                  }}
+                  onClick={handleEnter}
                   className="w-full min-h-[54px] rounded-2xl bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-600 hover:from-teal-800 hover:to-emerald-700 active:scale-[0.99] text-white font-bold text-[16px] px-4 py-3.5 shadow-teal-cta transition-all flex items-center justify-center gap-2 mt-2"
                 >
-                  <span className="truncate flex-1">Masuk Akun {selectedPosyandu?.nama}</span>
+                  <span className="truncate flex-1">Masuk ke {selectedPosyandu?.nama}</span>
                   <ArrowRight className="h-5 w-5 stroke-[2.75] flex-shrink-0" />
                 </button>
-
-                {onOpenLogin && (
-                  <button
-                    type="button"
-                    onClick={() => onOpenLogin('ortu')}
-                    className="w-full min-h-[46px] rounded-2xl bg-white border border-teal-200 text-teal-800 hover:bg-teal-50 font-bold text-xs px-4 py-2.5 transition flex items-center justify-center gap-2 shadow-2xs"
-                  >
-                    <Baby className="w-4 h-4 text-teal-600" />
-                    <span>Masuk sebagai Orang Tua (Pantau Balita)</span>
-                  </button>
-                )}
 
                 {/* Tombol Sekunder Garis Putus-putus */}
                 <button

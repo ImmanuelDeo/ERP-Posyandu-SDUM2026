@@ -8,7 +8,7 @@ import InputUkur from './components/InputUkur';
 import EnterPage from './components/EnterPage';
 import LoginPage from './components/LoginPage';
 import PortalOrtu from './components/PortalOrtu';
-import { Home, BookOpen, TrendingUp, PlusCircle, LogOut, KeyRound } from 'lucide-react';
+import { Home, BookOpen, TrendingUp, PlusCircle, LogOut } from 'lucide-react';
 
 function AppContent() {
   const {
@@ -22,12 +22,13 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState('beranda');
   const [childIdForPerkembangan, setChildIdForPerkembangan] = useState(null);
 
-  // Alur Autentikasi & Routing Mode:
-  // 'enter' : Welcome Screen / Tenant Gateway
-  // 'login' : Halaman Login (Kader Cabang vs Orang Tua)
-  // 'admin' : Masuk ke Dashboard Utama Posyandu
-  // 'ortu'  : Masuk ke Portal Khusus Orang Tua (View Only)
-  const [authMode, setAuthMode] = useState('enter');
+  // Alur Autentikasi & Routing:
+  // 1. 'welcome'       : Halaman Awal Sambutan (Mulai Sekarang)
+  // 2. 'login'         : Pilihan Login Admin vs Login Orang Tua
+  // 3. 'tenant_select' : Khusus Admin -> Pemilihan Stand/Cabang Posyandu
+  // 4. 'app'           : Khusus Admin -> Dashboard Operasional Posyandu
+  // 5. 'ortu'          : Khusus Ortu  -> Langsung ke Interface Data Anaknya
+  const [screen, setScreen] = useState('welcome');
   const [ortuSession, setOrtuSession] = useState(null); // { child, tenant }
 
   const tenant = db?.[currentTenant];
@@ -46,24 +47,22 @@ function AppContent() {
     setActiveTab('perkembangan');
   };
 
-  // Callback Login Berhasil
-  const handleAdminLoginSuccess = (branchId) => {
-    if (branchId) {
-      switchTenant(branchId);
-    }
-    setAuthMode('admin');
+  // 1. Callback Login Admin Berhasil -> Arahkan ke Pemilihan Posyandu / Stand
+  const handleAdminLoginSuccess = () => {
+    setScreen('tenant_select');
   };
 
+  // 2. Callback Login Orang Tua Berhasil -> Langsung ke Interface Data Anaknya
   const handleOrtuLoginSuccess = (matchedChild, matchedTenant) => {
     setOrtuSession({
       child: matchedChild,
       tenant: matchedTenant
     });
-    setAuthMode('ortu');
+    setScreen('ortu');
   };
 
   const handleLogout = () => {
-    setAuthMode('enter');
+    setScreen('welcome');
     setOrtuSession(null);
   };
 
@@ -78,8 +77,8 @@ function AppContent() {
     );
   }
 
-  // TAMPILAN 1: PORTAL KHUSUS ORANG TUA (VIEW ONLY ANAK SENDIRI)
-  if (authMode === 'ortu' && ortuSession) {
+  // TAMPILAN A: PORTAL KHUSUS ORANG TUA (VIEW ONLY ANAK SENDIRI)
+  if (screen === 'ortu' && ortuSession) {
     return (
       <PortalOrtu
         child={ortuSession.child}
@@ -89,20 +88,29 @@ function AppContent() {
     );
   }
 
-  // TAMPILAN 2: HALAMAN LOGIN TERPADU (KADER CABANG VS ORANG TUA)
-  if (authMode === 'login') {
+  // TAMPILAN B: HALAMAN LOGIN TERPADU (ADMIN VS ORANG TUA)
+  if (screen === 'login') {
     return (
       <LoginPage
-        defaultRole={loginRoleDefault}
         onAdminLoginSuccess={handleAdminLoginSuccess}
         onOrtuLoginSuccess={handleOrtuLoginSuccess}
-        onBackToWelcome={() => setAuthMode('enter')}
+        onBackToWelcome={() => setScreen('welcome')}
       />
     );
   }
 
-  // TAMPILAN 3: ENTER PAGE / SELEKSI TENANT POSYANDU
-  if (authMode === 'enter') {
+  // TAMPILAN C1: WELCOME SCREEN (STEP 1)
+  if (screen === 'welcome') {
+    return (
+      <EnterPage
+        posyanduList={[]}
+        onOpenLogin={() => setScreen('login')}
+      />
+    );
+  }
+
+  // TAMPILAN C2: PEMILIHAN POSYANDU / STAND (KHUSUS ADMIN SETELAH LOGIN)
+  if (screen === 'tenant_select') {
     const posyanduList = db
       ? Object.entries(db).map(([key, item]) => ({
           id: key,
@@ -117,8 +125,7 @@ function AppContent() {
       if (selectedItem?.id) {
         switchTenant(selectedItem.id);
       }
-      // Langsung buka login kader cabang posyandu tersebut
-      setAuthMode('login');
+      setScreen('app');
     };
 
     const handleRegisterPosyandu = (createdItem) => {
@@ -130,26 +137,22 @@ function AppContent() {
         children: []
       });
       switchTenant(createdKey);
-      setAuthMode('admin');
-    };
-
-    const handleOpenLogin = (role = 'kader', branchId = null) => {
-      if (branchId) switchTenant(branchId);
-      setAuthMode('login');
+      setScreen('app');
     };
 
     return (
       <EnterPage
+        initialStep={2}
         posyanduList={posyanduList}
         defaultSelectedId={currentTenant}
         onEnterPosyandu={handleEnterPosyandu}
         onRegisterPosyandu={handleRegisterPosyandu}
-        onOpenLogin={handleOpenLogin}
+        onBackToWelcome={() => setScreen('login')}
       />
     );
   }
 
-  // TAMPILAN 4: DASHBOARD UTAMA OPERASIONAL POSYANDU (KADER / ADMIN POSYANDU)
+  // TAMPILAN D: DASHBOARD UTAMA OPERASIONAL POSYANDU (ADMIN / KADER)
   const navItems = [
     { id: 'beranda', label: 'Beranda', icon: Home },
     { id: 'buku-data', label: 'Buku Data', icon: BookOpen },
@@ -159,16 +162,16 @@ function AppContent() {
 
   return (
     <div className="min-h-screen w-full bg-slate-50 text-slate-800 flex flex-col overflow-x-hidden antialiased">
-      {/* Top Header - Compact, Fit to Screen, Never Overflow on S10 */}
+      {/* Top Header */}
       <header className="sticky top-0 z-40 bg-posyandu-700 text-white shadow-md w-full">
         <div className="w-full px-3 sm:px-6 py-2 flex items-center justify-between gap-2">
-          {/* Posyandu Active & Exit Button */}
+          {/* Posyandu Active & Switch Stand Button */}
           <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
-              onClick={handleLogout}
+              onClick={() => setScreen('tenant_select')}
               className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 text-teal-200 transition flex-shrink-0"
-              title="Keluar / Ganti Posyandu Lain"
+              title="Ganti Stand Posyandu"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -187,24 +190,24 @@ function AppContent() {
             </div>
           </div>
 
-          {/* Badge Status Kader Posyandu & Tombol Ganti Akun */}
+          {/* Badge Petugas & Tombol Logout ke Layar Awal */}
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold text-teal-100 bg-white/10 border border-white/20 px-2 py-1 rounded-lg">
-              Kader Aktif
+            <span className="text-[10px] font-bold text-teal-100 bg-white/10 border border-white/20 px-2.5 py-1 rounded-lg">
+              Admin Posyandu
             </span>
             <button
               type="button"
-              onClick={() => setAuthMode('login')}
-              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-teal-100 text-xs font-bold transition flex items-center gap-1"
-              title="Ganti Mode / Login Ortu"
+              onClick={handleLogout}
+              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 text-teal-100 text-xs font-bold transition flex items-center gap-1"
+              title="Keluar / Logout Akun"
             >
-              <KeyRound className="w-3.5 h-3.5" />
+              <LogOut className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Content Area - Fully Fluid, No Horizontal Overflow on Samsung S10 */}
+      {/* Main Content Area */}
       <main id="appMainScroll" className="flex-1 w-full max-w-5xl mx-auto px-3 sm:px-6 py-3 pb-24 overflow-y-auto no-scrollbar">
         {activeTab === 'beranda' && <Beranda />}
         {activeTab === 'buku-data' && (
@@ -221,7 +224,7 @@ function AppContent() {
         )}
       </main>
 
-      {/* Bottom Navigation Bar - FIXED FULL WIDTH & PROPORTIONAL (No Offside / Overflow) */}
+      {/* Bottom Navigation Bar */}
       <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-md border-t border-slate-200 z-40 shadow-lg w-full">
         <div className="w-full max-w-md mx-auto h-full flex items-center justify-around px-1">
           {navItems.map((item) => {
