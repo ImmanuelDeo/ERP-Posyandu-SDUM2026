@@ -1,11 +1,18 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
+// src/components/Perkembangan.jsx
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext";
+import DualLineGrowthChart from "./DualLineGrowthChart";
+import StandarKesehatanCard from "./StandarKesehatanCard";
 
+/**
+ * Halaman Perkembangan & Komparasi Individu
+ * 1. Grafik Visual: Dual Line Chart khusus TB & BB dengan perbandingan data dari bulan lalu.
+ * 2. Grouping Kategori Standar Kesehatan Anak (Permenkes No. 2 Th 2020 / Buku KIA).
+ * 3. Indikator Kenaikan/Penurunan (KBM KMS).
+ */
 export default function Perkembangan({ initialChildId }) {
   const { getTenantData } = useAuth();
   const [selectedChildId, setSelectedChildId] = useState(initialChildId || null);
-  const [activeMetric, setActiveMetric] = useState('bb');
 
   const currentTenantData = getTenantData();
   const children = currentTenantData?.children || [];
@@ -23,221 +30,117 @@ export default function Perkembangan({ initialChildId }) {
     return (
       <section className="p-3 space-y-3">
         <div className="bg-white p-6 rounded-2xl border border-slate-200 text-center text-slate-400 text-xs">
-          Tidak ada data balita.
+          Belum ada data balita yang terdaftar di posyandu ini.
         </div>
       </section>
     );
   }
 
   const history = selectedChild.history || [];
-  const latest = history[history.length - 1];
-  const prev = history.length > 1 ? history[history.length - 2] : latest;
-
-  const metricLabels = {
-    bb: { label: 'Berat Badan (BB)', unit: 'kg', color: '#0d9488' },
-    tb: { label: 'Tinggi Badan (TB)', unit: 'cm', color: '#0d9488' },
-    lk: { label: 'Lingkar Kepala (LK)', unit: 'cm', color: '#0d9488' },
-    lila: { label: 'Lingkar Lengan (LiLA)', unit: 'cm', color: '#0d9488' },
+  const latest = history[history.length - 1] || {
+    bb: selectedChild.bb,
+    tb: selectedChild.tb,
+    lk: selectedChild.lk,
+    lila: selectedChild.lila,
+    usia: selectedChild.usiaBulan,
+    tgl: "Terbaru"
   };
-
-  const currentMetric = metricLabels[activeMetric];
-  const values = history.map(h => h[activeMetric]);
-  const minVal = Math.min(...values) * 0.93;
-  const maxVal = Math.max(...values) * 1.06;
-
-  // Diff calculation
-  const diff = latest[activeMetric] - prev[activeMetric];
-  const diffText = diff > 0 ? `▲ +${diff.toFixed(1)}` : diff < 0 ? `▼ ${diff.toFixed(1)}` : '━ Tetap';
-  const diffColor = diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-rose-600' : 'text-slate-400';
-
-  const renderSVG = () => {
-    const w = 320, h = 135, padX = 26, padY = 22;
-    const stepX = (w - 2 * padX) / Math.max(1, history.length - 1);
-    const points = values.map((val, idx) => {
-      const x = padX + idx * stepX;
-      const y = h - padY - ((val - minVal) / (maxVal - minVal)) * (h - 2 * padY);
-      return { x, y, val, age: history[idx].usia };
-    });
-    const polyline = points.map(p => `${p.x},${p.y}`).join(' ');
-
-    return (
-      <svg viewBox="0 0 320 140" className="w-full h-full" role="img" aria-label={`${currentMetric.label} chart`}>
-        <line x1={padX} y1={padY} x2={w-padX} y2={padY} stroke="#e2e8f0" strokeDasharray="3,3" />
-        <line x1={padX} y1={h/2} x2={w-padX} y2={h/2} stroke="#e2e8f0" strokeDasharray="3,3" />
-        <line x1={padX} y1={h-padY} x2={w-padX} y2={h-padY} stroke="#cbd5e1" strokeWidth="1.5" />
-        <polygon fill="rgba(13, 148, 136, 0.08)" points={`${points[0].x},${h-padY} ${polyline} ${points[points.length-1].x},${h-padY}`} />
-        <polyline fill="none" stroke="#0d9488" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" points={polyline} />
-        {points.map(p => (
-          <g key={p.age}>
-            <circle cx={p.x} cy={p.y} r="4.5" fill="#ffffff" stroke="#0f766e" strokeWidth="3" />
-            <text x={p.x} y={p.y - 7} fontSize="9" fontWeight="800" fill="#0f766e" textAnchor="middle">{p.val}</text>
-            <text x={p.x} y={h - 7} fontSize="8" fontWeight="600" fill="#64748b" textAnchor="middle">{p.age}bl</text>
-          </g>
-        ))}
-      </svg>
-    );
-  };
-
-  const renderHistoryTable = () => {
-    return (
-      <table className="w-full text-left text-[10px]">
-        <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
-          <tr>
-            <th className="py-2 px-2">Tanggal</th>
-            <th className="py-2 px-1">Usia</th>
-            <th className="py-2 px-1">BB</th>
-            <th className="py-2 px-1">TB</th>
-            <th className="py-2 px-1">LK</th>
-            <th className="py-2 px-1">LiLA</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-          {history.slice().reverse().map((row, idx) => (
-            <tr key={idx} className="hover:bg-slate-50 transition">
-              <td className="py-2 px-2 font-semibold text-slate-900">{row.tgl}</td>
-              <td className="py-2 px-1 text-slate-600">{row.usia} bln</td>
-              <td className="py-2 px-1 font-black text-posyandu-700">{row.bb} kg</td>
-              <td className="py-2 px-1 font-bold text-slate-800">{row.tb} cm</td>
-              <td className="py-2 px-1 text-slate-600">{row.lk} cm</td>
-              <td className="py-2 px-1 text-slate-600">{row.lila} cm</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    );
-  };
+  const prev = history.length > 1 ? history[history.length - 2] : null;
 
   return (
     <section className="p-3 space-y-3" id="perkembangan">
       {/* Child Selector */}
-      <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs space-y-1">
-        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Pilih Balita:</label>
+      <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+        <div className="flex items-center justify-between">
+          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+            Pilih Balita untuk Dipantau:
+          </label>
+          <span className="text-[10px] text-teal-700 font-semibold">
+            {children.length} Balita Terdaftar
+          </span>
+        </div>
         <select
-          value={selectedChildId}
+          value={selectedChildId || selectedChild.id}
           onChange={(e) => setSelectedChildId(e.target.value)}
-          className="w-full h-10 px-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs focus:outline-none focus:border-posyandu-600"
+          className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs focus:outline-none focus:border-posyandu-600"
         >
           {children.map(c => (
-            <option key={c.id} value={c.id}>{c.nama} ({c.usiaBulan} bln)</option>
+            <option key={c.id} value={c.id}>
+              {c.nama} ({c.gender === "L" ? "L" : "P"}, Usia: {c.usiaBulan} bln, Ortu: {c.namaOrtu})
+            </option>
           ))}
         </select>
       </div>
 
-      {/* Child Profile */}
-      <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
-        <div className="flex items-start justify-between">
-          <div>
-            <span className={`text-[9px] font-black px-1.5 py-0.2 rounded ${
-              selectedChild.gender === 'L' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'
-            }`}>
-              {selectedChild.gender === 'L' ? 'LAKI-LAKI' : 'PEREMPUAN'}
-            </span>
-            <h2 className="text-lg font-extrabold text-slate-900 mt-1">{selectedChild.nama}</h2>
-            <p className="text-xs text-slate-500 font-mono mt-0.5">NIK: {selectedChild.nik}</p>
+      {/* Profil Singkat Balita Terpilih */}
+      <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0 ${
+            selectedChild.gender === "L" ? "bg-blue-100 text-blue-700" : "bg-pink-100 text-pink-700"
+          }`}>
+            {selectedChild.gender}
           </div>
-          <div className="text-right">
-            <span className="text-[9px] font-semibold text-slate-400 block uppercase tracking-wider">Usia</span>
-            <span className="text-base font-black text-posyandu-700">{selectedChild.usiaBulan} Bulan</span>
+          <div className="min-w-0">
+            <h3 className="font-extrabold text-sm text-slate-900 truncate">
+              {selectedChild.nama}
+            </h3>
+            <p className="text-[11px] text-slate-500 truncate">
+              Ibu/Ortu: {selectedChild.namaOrtu} • NIK: {selectedChild.nik ? selectedChild.nik.slice(-4) : "-"}
+            </p>
           </div>
         </div>
-        <div className="mt-2 pt-2 border-t border-slate-100 grid grid-cols-2 gap-1 text-xs">
-          <div><span className="text-slate-400 block text-[10px]">Tgl Lahir:</span><span className="font-bold text-slate-700">{selectedChild.tglLahir}</span></div>
-          <div><span className="text-slate-400 block text-[10px]">Ortu:</span><span className="font-bold text-slate-700">{selectedChild.namaOrtu}</span></div>
-        </div>
-      </div>
-
-      {/* Komparasi */}
-      <div className="bg-slate-900 text-white p-3 rounded-2xl shadow-md border border-slate-800 space-y-2">
-        <div className="flex items-center justify-between pb-1 border-b border-slate-800">
-          <div>
-            <h3 className="font-bold text-xs text-teal-300">Komparasi Perkembangan</h3>
-            <p className="text-[10px] text-slate-400">Pemeriksaan Terbaru vs Pemeriksaan Lalu</p>
-          </div>
-          <span className="text-[9px] bg-slate-800 border border-slate-700 text-teal-400 font-bold px-1.5 py-0.5 rounded-lg">
-            {latest?.tgl?.split(' ')[0] || 'N/A'} vs {prev?.tgl?.split(' ')[0] || 'N/A'}
+        <div className="text-right flex-shrink-0">
+          <span className="text-xs font-black text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-lg block">
+            {latest.usia || selectedChild.usiaBulan} Bulan
           </span>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="bg-slate-800/90 p-2 rounded-xl border border-slate-700">
-            <span className="text-[10px] text-slate-400 block font-medium">Berat Badan (BB)</span>
-            <div className="flex items-baseline justify-between mt-0.5">
-              <span className="text-lg font-black text-white">{latest.bb} <span className="text-xs font-normal text-slate-400">kg</span></span>
-              <span className={`text-[10px] font-bold ${diffColor} bg-emerald-950/70 border border-emerald-800 px-1.5 py-0.5 rounded`}>
-                {diff > 0 ? `▲ +${diff.toFixed(1)}` : diff < 0 ? `▼ ${diff.toFixed(1)}` : '━ Tetap'}
-              </span>
-            </div>
-            <span className="text-[9px] text-slate-400 block mt-0.5">Lalu: <strong>{prev.bb} kg</strong></span>
-          </div>
-          <div className="bg-slate-800/90 p-2 rounded-xl border border-slate-700">
-            <span className="text-[10px] text-slate-400 block font-medium">Tinggi Badan (TB)</span>
-            <div className="flex items-baseline justify-between mt-0.5">
-              <span className="text-lg font-black text-white">{latest.tb} <span className="text-xs font-normal text-slate-400">cm</span></span>
-              <span className={`text-[10px] font-bold ${diffColor} bg-emerald-950/70 border border-emerald-800 px-1.5 py-0.5 rounded`}>
-                {diff > 0 ? `▲ +${diff.toFixed(1)}` : diff < 0 ? `▼ ${diff.toFixed(1)}` : '━ Tetap'}
-              </span>
-            </div>
-            <span className="text-[9px] text-slate-400 block mt-0.5">Lalu: <strong>{prev.tb} cm</strong></span>
-          </div>
-          <div className="bg-slate-800/90 p-2 rounded-xl border border-slate-700">
-            <span className="text-[10px] text-slate-400 block font-medium">Lingkar Kepala (LK)</span>
-            <div className="flex items-baseline justify-between mt-0.5">
-              <span className="text-lg font-black text-white">{latest.lk} <span className="text-xs font-normal text-slate-400">cm</span></span>
-              <span className={`text-[10px] font-bold ${diffColor} bg-emerald-950/70 border border-emerald-800 px-1.5 py-0.5 rounded`}>
-                {diff > 0 ? `▲ +${diff.toFixed(1)}` : diff < 0 ? `▼ ${diff.toFixed(1)}` : '━ Tetap'}
-              </span>
-            </div>
-            <span className="text-[9px] text-slate-400 block mt-0.5">Lalu: <strong>{prev.lk} cm</strong></span>
-          </div>
-          <div className="bg-slate-800/90 p-2 rounded-xl border border-slate-700">
-            <span className="text-[10px] text-slate-400 block font-medium">Lingkar Lengan (LiLA)</span>
-            <div className="flex items-baseline justify-between mt-0.5">
-              <span className="text-lg font-black text-white">{latest.lila} <span className="text-xs font-normal text-slate-400">cm</span></span>
-              <span className={`text-[10px] font-bold ${diffColor} bg-emerald-950/70 border border-emerald-800 px-1.5 py-0.5 rounded`}>
-                {diff > 0 ? `▲ +${diff.toFixed(1)}` : diff < 0 ? `▼ ${diff.toFixed(1)}` : '━ Tetap'}
-              </span>
-            </div>
-            <span className="text-[9px] text-slate-400 block mt-0.5">Lalu: <strong>{prev.lila} cm</strong></span>
-          </div>
+          <span className="text-[9px] text-slate-400 mt-0.5 block">{latest.tgl}</span>
         </div>
       </div>
 
-      {/* Grafik Tren */}
-      <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+      {/* 1. Grafik Visual Khusus TB & BB (Dual Line Chart) + Perbandingan Data Bulan Lalu */}
+      <DualLineGrowthChart history={history} child={selectedChild} />
+
+      {/* 2. Grouping Kategori Standar Kesehatan Anak (Kemenkes RI Permenkes No. 2/2020) */}
+      <StandarKesehatanCard
+        child={selectedChild}
+        currentMeasurement={latest}
+        prevMeasurement={prev}
+      />
+
+      {/* 3. Riwayat Pemeriksaan Lengkap (Tabel) */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-xs space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-xs text-slate-900">Grafik Tren Individu</h3>
-          <span className="text-[10px] font-semibold text-posyandu-700 bg-posyandu-50 px-2 py-0.5 rounded-lg">
-            {history[0]?.usia} - {latest?.usia} bln
-          </span>
+          <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+            Tabel Riwayat Pemeriksaan Fisik
+          </h4>
+          <span className="text-[10px] text-slate-400 font-semibold">{history.length} Catatan</span>
         </div>
 
-        <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 rounded-xl text-[10px] font-bold text-center">
-          {Object.entries(metricLabels).map(([key, val]) => (
-            <button
-              key={key}
-              onClick={() => setActiveMetric(key)}
-              className={`py-1 rounded-lg ${activeMetric === key ? 'bg-posyandu-700 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
-            >
-              {val.label.split('(')[1]?.replace(')', '') || val.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="h-40 w-full bg-slate-50 rounded-xl border border-slate-100 p-2 flex items-center justify-center">
-          {renderSVG()}
-        </div>
-        <p className="text-[10px] text-slate-500 text-center italic">
-          Tren {currentMetric.label} balita dari pemeriksaan awal hingga terkini.
-        </p>
-      </div>
-
-      {/* Log Riwayat */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="px-3 py-2 bg-slate-100/80 border-b border-slate-200 flex justify-between items-center">
-          <h3 className="font-bold text-[9px] text-slate-700 uppercase tracking-wider">Log Riwayat Seluruh Pemeriksaan</h3>
-          <span className="text-[9px] text-slate-500 font-semibold">{history.length} Kunjungan</span>
-        </div>
-        <div className="overflow-x-auto">
-          {renderHistoryTable()}
+        <div className="overflow-x-auto no-scrollbar">
+          <table className="w-full text-left text-[11px]">
+            <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
+              <tr>
+                <th className="py-2 px-2.5">Tanggal</th>
+                <th className="py-2 px-1.5">Usia</th>
+                <th className="py-2 px-1.5 text-teal-800 font-black">BB (kg)</th>
+                <th className="py-2 px-1.5 text-blue-800 font-black">TB (cm)</th>
+                <th className="py-2 px-1.5">LK (cm)</th>
+                <th className="py-2 px-1.5">LiLA (cm)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-semibold text-slate-800">
+              {history.slice().reverse().map((row, idx) => (
+                <tr key={idx} className="hover:bg-slate-50 transition">
+                  <td className="py-2 px-2.5 font-bold text-slate-900 whitespace-nowrap">{row.tgl}</td>
+                  <td className="py-2 px-1.5 text-slate-600">{row.usia} bln</td>
+                  <td className="py-2 px-1.5 text-teal-700 font-black">{row.bb}</td>
+                  <td className="py-2 px-1.5 text-blue-700 font-black">{row.tb}</td>
+                  <td className="py-2 px-1.5 text-slate-600">{row.lk}</td>
+                  <td className="py-2 px-1.5 text-slate-600">{row.lila}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </section>

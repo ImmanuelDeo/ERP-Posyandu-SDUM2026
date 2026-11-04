@@ -116,6 +116,51 @@ export function AuthProvider({ children }) {
     return key;
   }, [db, saveDb]);
 
+  const importChildren = useCallback((newChildrenList) => {
+    if (!db || !Array.isArray(newChildrenList) || newChildrenList.length === 0) return 0;
+    const newDb = { ...db };
+    const currentChildren = [...(newDb[currentTenant]?.children || [])];
+
+    let addedCount = 0;
+    newChildrenList.forEach((child) => {
+      // Cek apakah balita sudah ada berdasarkan NIK (jika ada NIK valid)
+      const existingIndex = child.nik ? currentChildren.findIndex(c => c.nik === child.nik) : -1;
+      if (existingIndex >= 0) {
+        // Gabungkan riwayat jika ada pengukuran baru
+        const existingChild = currentChildren[existingIndex];
+        const mergedHistory = [...(existingChild.history || [])];
+        if (child.history && child.history.length > 0) {
+          child.history.forEach(h => {
+            const isDup = mergedHistory.some(m => m.tgl === h.tgl);
+            if (!isDup) mergedHistory.push(h);
+          });
+        }
+        currentChildren[existingIndex] = {
+          ...existingChild,
+          ...child,
+          history: mergedHistory,
+          bb: child.bb || existingChild.bb,
+          tb: child.tb || existingChild.tb,
+          lk: child.lk || existingChild.lk,
+          lila: child.lila || existingChild.lila,
+        };
+      } else {
+        currentChildren.push({
+          ...child,
+          id: child.id || `import-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`
+        });
+      }
+      addedCount++;
+    });
+
+    newDb[currentTenant] = {
+      ...newDb[currentTenant],
+      children: currentChildren
+    };
+    saveDb(newDb);
+    return addedCount;
+  }, [db, currentTenant, saveDb]);
+
   return (
     <AuthContext.Provider value={{
       currentTenant,
@@ -128,6 +173,7 @@ export function AuthProvider({ children }) {
       updateChild,
       deleteChild,
       addMeasurement,
+      importChildren,
       exportToCSV,
     }}>
       {children}

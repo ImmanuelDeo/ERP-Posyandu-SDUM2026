@@ -1,11 +1,14 @@
-import { useState } from 'react';
+// src/App.jsx
+import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Beranda from './components/Beranda';
 import BukuData from './components/BukuData';
 import Perkembangan from './components/Perkembangan';
 import InputUkur from './components/InputUkur';
 import EnterPage from './components/EnterPage';
-import { Home, BookOpen, TrendingUp, PlusCircle, LogOut } from 'lucide-react';
+import LoginPage from './components/LoginPage';
+import PortalOrtu from './components/PortalOrtu';
+import { Home, BookOpen, TrendingUp, PlusCircle, LogOut, KeyRound } from 'lucide-react';
 
 function AppContent() {
   const {
@@ -19,8 +22,13 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState('beranda');
   const [childIdForPerkembangan, setChildIdForPerkembangan] = useState(null);
 
-  // Onboarding & Tenant Selection Gateway
-  const [isTenantSelected, setIsTenantSelected] = useState(false);
+  // Alur Autentikasi & Routing Mode:
+  // 'enter' : Welcome Screen / Tenant Gateway
+  // 'login' : Halaman Login (Kader Cabang vs Orang Tua)
+  // 'admin' : Masuk ke Dashboard Utama Posyandu
+  // 'ortu'  : Masuk ke Portal Khusus Orang Tua (View Only)
+  const [authMode, setAuthMode] = useState('enter');
+  const [ortuSession, setOrtuSession] = useState(null); // { child, tenant }
 
   const tenant = db?.[currentTenant];
 
@@ -38,6 +46,27 @@ function AppContent() {
     setActiveTab('perkembangan');
   };
 
+  // Callback Login Berhasil
+  const handleAdminLoginSuccess = (branchId) => {
+    if (branchId) {
+      switchTenant(branchId);
+    }
+    setAuthMode('admin');
+  };
+
+  const handleOrtuLoginSuccess = (matchedChild, matchedTenant) => {
+    setOrtuSession({
+      child: matchedChild,
+      tenant: matchedTenant
+    });
+    setAuthMode('ortu');
+  };
+
+  const handleLogout = () => {
+    setAuthMode('enter');
+    setOrtuSession(null);
+  };
+
   if (!initialized) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
@@ -49,9 +78,31 @@ function AppContent() {
     );
   }
 
-  // FLOW 1: ONBOARDING / PILIH & DAFTARKAN POSYANDU (WARM HUMANIST SAAS)
-  if (!isTenantSelected) {
-    // Transform db object into array expected by EnterPage
+  // TAMPILAN 1: PORTAL KHUSUS ORANG TUA (VIEW ONLY ANAK SENDIRI)
+  if (authMode === 'ortu' && ortuSession) {
+    return (
+      <PortalOrtu
+        child={ortuSession.child}
+        tenant={ortuSession.tenant}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  // TAMPILAN 2: HALAMAN LOGIN TERPADU (KADER CABANG VS ORANG TUA)
+  if (authMode === 'login') {
+    return (
+      <LoginPage
+        defaultRole={loginRoleDefault}
+        onAdminLoginSuccess={handleAdminLoginSuccess}
+        onOrtuLoginSuccess={handleOrtuLoginSuccess}
+        onBackToWelcome={() => setAuthMode('enter')}
+      />
+    );
+  }
+
+  // TAMPILAN 3: ENTER PAGE / SELEKSI TENANT POSYANDU
+  if (authMode === 'enter') {
     const posyanduList = db
       ? Object.entries(db).map(([key, item]) => ({
           id: key,
@@ -66,7 +117,8 @@ function AppContent() {
       if (selectedItem?.id) {
         switchTenant(selectedItem.id);
       }
-      setIsTenantSelected(true);
+      // Langsung buka login kader cabang posyandu tersebut
+      setAuthMode('login');
     };
 
     const handleRegisterPosyandu = (createdItem) => {
@@ -78,7 +130,12 @@ function AppContent() {
         children: []
       });
       switchTenant(createdKey);
-      setIsTenantSelected(true);
+      setAuthMode('admin');
+    };
+
+    const handleOpenLogin = (role = 'kader', branchId = null) => {
+      if (branchId) switchTenant(branchId);
+      setAuthMode('login');
     };
 
     return (
@@ -87,11 +144,12 @@ function AppContent() {
         defaultSelectedId={currentTenant}
         onEnterPosyandu={handleEnterPosyandu}
         onRegisterPosyandu={handleRegisterPosyandu}
+        onOpenLogin={handleOpenLogin}
       />
     );
   }
 
-  // FLOW 2: MAIN APLIKASI POSYANDU (FULLY RESPONSIVE MOBILE S10 & ALL DEVICES)
+  // TAMPILAN 4: DASHBOARD UTAMA OPERASIONAL POSYANDU (KADER / ADMIN POSYANDU)
   const navItems = [
     { id: 'beranda', label: 'Beranda', icon: Home },
     { id: 'buku-data', label: 'Buku Data', icon: BookOpen },
@@ -108,7 +166,7 @@ function AppContent() {
           <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
-              onClick={() => setIsTenantSelected(false)}
+              onClick={handleLogout}
               className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 text-teal-200 transition flex-shrink-0"
               title="Keluar / Ganti Posyandu Lain"
             >
@@ -129,8 +187,20 @@ function AppContent() {
             </div>
           </div>
 
-          {/* Placeholder for alignment */}
-          <div className="w-10" />
+          {/* Badge Status Kader Posyandu & Tombol Ganti Akun */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-teal-100 bg-white/10 border border-white/20 px-2 py-1 rounded-lg">
+              Kader Aktif
+            </span>
+            <button
+              type="button"
+              onClick={() => setAuthMode('login')}
+              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-teal-100 text-xs font-bold transition flex items-center gap-1"
+              title="Ganti Mode / Login Ortu"
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </header>
 

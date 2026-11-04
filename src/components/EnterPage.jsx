@@ -1,6 +1,7 @@
 // src/components/EnterPage.jsx
 import React, { useState, useMemo } from 'react';
 import {
+  Baby,
   HeartHandshake,
   MapPin,
   Check,
@@ -189,6 +190,7 @@ export default function EnterPage({
   defaultSelectedId,
   onEnterPosyandu,
   onRegisterPosyandu,
+  onOpenLogin,
 }) {
   // 2-Step Flow State: 1 = Welcome Screen, 2 = Tenant Selector Dashboard
   const [step, setStep] = useState(1);
@@ -326,6 +328,17 @@ export default function EnterPage({
               <span>Mulai Sekarang</span>
               <ArrowRight className="h-5 w-5 stroke-[2.75] transition-transform group-hover:translate-x-1" />
             </button>
+
+            {onOpenLogin && (
+              <button
+                type="button"
+                onClick={() => onOpenLogin('ortu')}
+                className="w-full min-h-[44px] rounded-full bg-white/90 hover:bg-white active:scale-[0.99] text-teal-800 border border-teal-200/80 font-bold text-xs px-4 py-2.5 shadow-2xs transition flex items-center justify-center gap-2"
+              >
+                <Baby className="w-4 h-4 text-teal-600" />
+                <span>Portal Orang Tua (Cek Data Anak)</span>
+              </button>
+            )}
 
             <p className="text-center text-[12px] font-medium text-slate-500">
               Teknologi Multi-Tenant ERP Cloud • Sains Data Telkom University
@@ -549,12 +562,29 @@ export default function EnterPage({
                 {/* Tombol Utama Masuk ke Posyandu Terpilih */}
                 <button
                   type="button"
-                  onClick={handleEnter}
+                  onClick={() => {
+                    if (onOpenLogin) {
+                      onOpenLogin('kader', selectedPosyandu?.id);
+                    } else {
+                      handleEnter();
+                    }
+                  }}
                   className="w-full min-h-[54px] rounded-2xl bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-600 hover:from-teal-800 hover:to-emerald-700 active:scale-[0.99] text-white font-bold text-[16px] px-4 py-3.5 shadow-teal-cta transition-all flex items-center justify-center gap-2 mt-2"
                 >
-                  <span className="truncate flex-1">Masuk ke {selectedPosyandu?.nama}</span>
+                  <span className="truncate flex-1">Masuk Akun {selectedPosyandu?.nama}</span>
                   <ArrowRight className="h-5 w-5 stroke-[2.75] flex-shrink-0" />
                 </button>
+
+                {onOpenLogin && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenLogin('ortu')}
+                    className="w-full min-h-[46px] rounded-2xl bg-white border border-teal-200 text-teal-800 hover:bg-teal-50 font-bold text-xs px-4 py-2.5 transition flex items-center justify-center gap-2 shadow-2xs"
+                  >
+                    <Baby className="w-4 h-4 text-teal-600" />
+                    <span>Masuk sebagai Orang Tua (Pantau Balita)</span>
+                  </button>
+                )}
 
                 {/* Tombol Sekunder Garis Putus-putus */}
                 <button
