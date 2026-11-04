@@ -139,8 +139,8 @@ export default function PortalOrtu({ child, tenant, onLogout }) {
               </div>
             </div>
 
-            {/* Grafik Dual Line TB & BB + 4 Kartu Perbandingan Lengkap */}
-            <DualLineGrowthChart history={history} />
+            {/* Grafik KMS Standar Kemenkes TB & BB + 4 Kartu Perbandingan Lengkap */}
+            <DualLineGrowthChart history={history} child={child} />
           </div>
 
           {/* KOLOM KANAN: Standar Kesehatan Kemenkes & Tabel Riwayat */}

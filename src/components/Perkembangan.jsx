@@ -101,8 +101,8 @@ export default function Perkembangan({ initialChildId }) {
             </div>
           </div>
 
-          {/* 1. Grafik Visual Khusus TB & BB (Dual Line Chart) + 4 Kartu Perbandingan Lengkap */}
-          <DualLineGrowthChart history={history} />
+          {/* 1. Grafik Visual Standar KMS TB & BB + 4 Kartu Perbandingan Lengkap */}
+          <DualLineGrowthChart history={history} child={selectedChild} />
         </div>
 
         {/* KOLOM KANAN: Standar Kesehatan Kemenkes & Tabel Riwayat Pemeriksaan */}

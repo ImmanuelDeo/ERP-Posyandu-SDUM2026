@@ -284,6 +284,7 @@ export function evaluateGrowthKMS(currentBB, prevBB, usiaBulan) {
       status: 'Baru',
       code: 'B',
       diffKg: 0,
+      diffGram: 0,
       kbmGram: getKBM(usiaBulan),
       isNaik: true,
       label: 'Penimbangan Pertama / Baseline',
@@ -305,13 +306,13 @@ export function evaluateGrowthKMS(currentBB, prevBB, usiaBulan) {
       diffGram,
       kbmGram,
       isNaik: true,
-      label: `Naik Sesuai KBM (▲ +${diffKg} kg, target: ${kbmGram}g)`,
+      label: `Naik Sesuai KBM (▲ +${diffGram} gram, target: ${kbmGram}g)`,
       color: 'text-emerald-700',
       bg: 'bg-emerald-50 border-emerald-200',
       icon: 'up',
       desc: 'Pertumbuhan anak optimal mengikuti garis KMS.'
     };
-  } else if (diffKg > 0) {
+  } else if (diffGram > 0) {
     return {
       status: 'Tidak Naik (T)',
       code: 'T',
@@ -319,13 +320,13 @@ export function evaluateGrowthKMS(currentBB, prevBB, usiaBulan) {
       diffGram,
       kbmGram,
       isNaik: false,
-      label: `Kenaikan Kurang dari KBM (▲ +${diffKg} kg < ${kbmGram}g)`,
+      label: `Kenaikan Kurang dari KBM (▲ +${diffGram} gram < ${kbmGram}g)`,
       color: 'text-amber-800',
       bg: 'bg-amber-50 border-amber-200',
       icon: 'warning',
       desc: 'Berat badan bertambah namun di bawah target minimal KMS.'
     };
-  } else if (diffKg === 0) {
+  } else if (diffGram === 0) {
     return {
       status: 'Tidak Naik (T)',
       code: 'T',
@@ -333,7 +334,7 @@ export function evaluateGrowthKMS(currentBB, prevBB, usiaBulan) {
       diffGram: 0,
       kbmGram,
       isNaik: false,
-      label: 'Berat Badan Tetap / Mendatar (▬ 0.0 kg)',
+      label: 'Berat Badan Tetap / Mendatar (━ 0 gram)',
       color: 'text-amber-800',
       bg: 'bg-amber-50 border-amber-200',
       icon: 'flat',
@@ -347,7 +348,7 @@ export function evaluateGrowthKMS(currentBB, prevBB, usiaBulan) {
       diffGram,
       kbmGram,
       isNaik: false,
-      label: `Berat Badan Turun (▼ ${diffKg} kg)`,
+      label: `Berat Badan Turun (▼ ${diffGram} gram)`,
       color: 'text-rose-700',
       bg: 'bg-rose-50 border-rose-200',
       icon: 'down',
