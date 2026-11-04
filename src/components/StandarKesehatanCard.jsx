@@ -36,9 +36,9 @@ export default function StandarKesehatanCard({ child, currentMeasurement, prevMe
   const kms = evaluateGrowthKMS(bb, prevMeasurement?.bb, usia);
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-3.5 space-y-3">
+    <div className="bg-white rounded-3xl border border-slate-200/90 shadow-warm-card p-5 sm:p-6 space-y-4">
       {/* Header Standar Kemenkes */}
-      <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700">
             <Activity className="w-4 h-4" />
@@ -58,9 +58,9 @@ export default function StandarKesehatanCard({ child, currentMeasurement, prevMe
       </div>
 
       {/* Grid 4 Indikator Utama Kemenkes */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
         {/* 1. Berat Badan Menurut Usia (BB/U) */}
-        <div className={`p-2.5 rounded-xl border ${bbu.bg}`}>
+        <div className={`p-3.5 rounded-2xl border ${bbu.bg} space-y-1`}>
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
               <Scale className="w-3 h-3 text-teal-600" />
@@ -75,7 +75,7 @@ export default function StandarKesehatanCard({ child, currentMeasurement, prevMe
         </div>
 
         {/* 2. Tinggi Badan Menurut Usia (TB/U - Indikator Stunting) */}
-        <div className={`p-2.5 rounded-xl border ${tbu.bg}`}>
+        <div className={`p-3.5 rounded-2xl border ${tbu.bg} space-y-1`}>
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
               <Ruler className="w-3 h-3 text-blue-600" />
@@ -90,7 +90,7 @@ export default function StandarKesehatanCard({ child, currentMeasurement, prevMe
         </div>
 
         {/* 3. Berat terhadap Tinggi (BB/TB - Status Gizi / Wasting) */}
-        <div className={`p-2.5 rounded-xl border ${bbtb.bg}`}>
+        <div className={`p-3.5 rounded-2xl border ${bbtb.bg} space-y-1`}>
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
               <Heart className="w-3 h-3 text-rose-600" />
@@ -105,7 +105,7 @@ export default function StandarKesehatanCard({ child, currentMeasurement, prevMe
         </div>
 
         {/* 4. Evaluasi Kenaikan Berat Badan KMS (KBM Naik/Tidak Naik) */}
-        <div className={`p-2.5 rounded-xl border ${kms.bg}`}>
+        <div className={`p-3.5 rounded-2xl border ${kms.bg} space-y-1`}>
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
               <TrendingUp className="w-3 h-3 text-emerald-600" />
