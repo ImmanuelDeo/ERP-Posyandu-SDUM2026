@@ -49,7 +49,8 @@ const KMS_REF_DATA = {
 };
 
 export default function DualLineGrowthChart({ history = [], child = null }) {
-  const [activeTab, setActiveTab] = useState('bb'); // 'bb' | 'tb' | 'both'
+  // Hanya ada 2 pilihan tab (tidak ada lagi opsi 'both' kedua grafik)
+  const [activeTab, setActiveTab] = useState('bb'); // 'bb' | 'tb'
 
   if (!history || history.length === 0) {
     return (
@@ -127,14 +128,14 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
     );
   };
 
-  // 2. REVISI PERMINTAAN 2: RENDER GRAFIK KMS (KARTU MENUJU SEHAT) RESMI
+  // 2. REVISI PERMINTAAN 2: GRAFIK KMS BERSIH (TANPA GARIS GANDA BERTABRAKAN)
   // Render Grafik KMS Berat Badan Menurut Usia (BB/U)
   const renderKMSBeratBadanChart = () => {
     const refList = isMale ? KMS_REF_DATA.bbL : KMS_REF_DATA.bbP;
     const maxAge = Math.max(12, ...history.map(h => h.usia || 0));
     const plotAgeLimit = Math.min(24, Math.max(maxAge + 1, 12));
 
-    const w = 360, h = 210, padL = 38, padR = 24, padT = 20, padB = 34;
+    const w = 360, h = 210, padL = 38, padR = 24, padT = 24, padB = 34;
     const plotW = w - padL - padR;
     const plotH = h - padT - padB;
 
@@ -145,23 +146,16 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
     const getX = (age) => padL + (age / plotAgeLimit) * plotW;
     const getY = (val) => padT + plotH - ((val - minScale) / scaleRange) * plotH;
 
-    // Hitung pita-pita kurva KMS untuk umur 0 s.d. plotAgeLimit
     const ages = Array.from({ length: plotAgeLimit + 1 }, (_, i) => i);
 
-    // +2 SD
+    // Titik-titik pembatas zona KMS
     const ptsPlus2 = ages.map(a => `${getX(a).toFixed(1)},${getY(refList[a][0] + 2 * refList[a][1]).toFixed(1)}`);
-    // +1 SD
     const ptsPlus1 = ages.map(a => `${getX(a).toFixed(1)},${getY(refList[a][0] + 1 * refList[a][1]).toFixed(1)}`);
-    // Median (Garis Hijau Tengah Ideal)
-    const ptsMedian = ages.map(a => `${getX(a).toFixed(1)},${getY(refList[a][0]).toFixed(1)}`);
-    // -1 SD
     const ptsMinus1 = ages.map(a => `${getX(a).toFixed(1)},${getY(refList[a][0] - 1 * refList[a][1]).toFixed(1)}`);
-    // -2 SD (Batas Bawah Normal / Awal Kuning)
     const ptsMinus2 = ages.map(a => `${getX(a).toFixed(1)},${getY(refList[a][0] - 2 * refList[a][1]).toFixed(1)}`);
-    // -3 SD (Garis Merah Kemenkes - BGM)
     const ptsMinus3 = ages.map(a => `${getX(a).toFixed(1)},${getY(refList[a][0] - 3 * refList[a][1]).toFixed(1)}`);
 
-    // Titik Plotting Balita Riil
+    // Titik Data Balita Riil
     const childPoints = history.map(item => {
       const age = Math.min(plotAgeLimit, item.usia || 0);
       return {
@@ -175,114 +169,121 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
     const childPolyline = childPoints.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
 
     return (
-      <div className="bg-white p-4 rounded-3xl border border-slate-200/90 shadow-warm-card space-y-3">
+      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-warm-card space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
-              <h4 className="font-extrabold text-slate-900 text-sm">
+              <span className="w-2.5 h-2.5 rounded-full bg-teal-600 inline-block" />
+              <h4 className="font-extrabold text-slate-900 text-sm sm:text-base">
                 Grafik KMS Berat Badan Menurut Usia (BB/U)
               </h4>
             </div>
             <p className="text-[11px] text-slate-500">
-              Standar Kurva Pertumbuhan KMS Kemenkes RI ({isMale ? 'Anak Laki-Laki' : 'Anak Perempuan'})
+              Pita Pertumbuhan Standar KMS Kemenkes RI ({isMale ? 'Laki-Laki' : 'Perempuan'})
             </p>
           </div>
-          <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-            KMS Aktif
+          <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
+            KMS Kemenkes
           </span>
         </div>
 
         {/* SVG Canvas KMS BB */}
-        <div className="w-full h-56 relative bg-[#FAFAF9] rounded-2xl border border-slate-200/70 overflow-hidden p-1">
+        <div className="w-full h-56 relative bg-[#FCFBF9] rounded-2xl border border-slate-200/80 overflow-hidden p-1 shadow-inner">
           <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full select-none" role="img" aria-label="Grafik KMS Berat Badan">
-            {/* 1. Pita Warna KMS: Bawah Garis Merah (< -3 SD) */}
+            {/* PITA WARNA KMS (SEBAGAI BACKGROUND LEMBUT, TANPA GARIS BORDER TEBAL GANDA) */}
+            {/* 1. Pita Bawah Garis Merah (< -3 SD) */}
             <polygon
               fill="#FEE2E2"
               points={`${getX(0)},${h - padB} ${ptsMinus3.join(' ')} ${getX(plotAgeLimit)},${h - padB}`}
             />
 
-            {/* 2. Pita Warna KMS: Kuning Bawah (-3 SD s.d. -2 SD) */}
+            {/* 2. Pita Kuning Waspada (-3 SD s.d. -2 SD) */}
             <polygon
               fill="#FEF08A"
               points={`${ptsMinus3.join(' ')} ${[...ptsMinus2].reverse().join(' ')}`}
             />
 
-            {/* 3. Pita Warna KMS: Hijau Muda Bawah (-2 SD s.d. -1 SD) */}
+            {/* 3. Pita Hijau Muda Bawah (-2 SD s.d. -1 SD) */}
             <polygon
-              fill="#D1FAE5"
+              fill="#DCFCE7"
               points={`${ptsMinus2.join(' ')} ${[...ptsMinus1].reverse().join(' ')}`}
             />
 
-            {/* 4. Pita Warna KMS: Hijau Tua Ideal (-1 SD s.d. +1 SD) */}
+            {/* 4. Pita Hijau Tengah Ideal (-1 SD s.d. +1 SD) */}
             <polygon
-              fill="#A7F3D0"
+              fill="#BBF7D0"
               points={`${ptsMinus1.join(' ')} ${[...ptsPlus1].reverse().join(' ')}`}
             />
 
-            {/* 5. Pita Warna KMS: Hijau Muda Atas (+1 SD s.d. +2 SD) */}
+            {/* 5. Pita Hijau Muda Atas (+1 SD s.d. +2 SD) */}
             <polygon
-              fill="#D1FAE5"
+              fill="#DCFCE7"
               points={`${ptsPlus1.join(' ')} ${[...ptsPlus2].reverse().join(' ')}`}
             />
 
-            {/* 6. Garis Batas Standar KMS */}
-            {/* Garis Merah BGM (-3 SD) */}
-            <polyline fill="none" stroke="#DC2626" strokeWidth="2" strokeDasharray="3,2" points={ptsMinus3.join(' ')} />
-            {/* Garis Kuning (-2 SD) */}
-            <polyline fill="none" stroke="#CA8A04" strokeWidth="1.5" points={ptsMinus2.join(' ')} />
-            {/* Garis Hijau Median (Pertumbuhan Ideal) */}
-            <polyline fill="none" stroke="#059669" strokeWidth="2.5" points={ptsMedian.join(' ')} />
-            {/* Garis Atas (+2 SD) */}
-            <polyline fill="none" stroke="#CA8A04" strokeWidth="1.5" points={ptsPlus2.join(' ')} />
+            {/* 6. Garis Batas Bawah Merah (BGM) Kemenkes: Garis putus-putus merah tipis tegas */}
+            <polyline fill="none" stroke="#EF4444" strokeWidth="1.2" strokeDasharray="4,2.5" points={ptsMinus3.join(' ')} />
 
-            {/* Grid & Sumbu X/Y */}
-            <line x1={padL} y1={h - padB} x2={w - padR} y2={h - padB} stroke="#475569" strokeWidth="1.5" />
-            <line x1={padL} y1={padT} x2={padL} y2={h - padB} stroke="#475569" strokeWidth="1.5" />
-
-            {/* Label Sumbu Y (kg) */}
+            {/* Grid Interval Horizontal Halus */}
             {[2, 4, 6, 8, 10, 12, 14].map(val => (
               <g key={`y-bb-${val}`}>
-                <line x1={padL - 3} y1={getY(val)} x2={w - padR} y2={getY(val)} stroke="#E2E8F0" strokeDasharray="2,3" />
-                <text x={padL - 4} y={getY(val) + 3} fontSize="7.5" fontWeight="bold" fill="#64748B" textAnchor="end">{val}</text>
+                <line x1={padL} y1={getY(val)} x2={w - padR} y2={getY(val)} stroke="#E2E8F0" strokeWidth="0.8" strokeDasharray="3,3" />
+                <text x={padL - 5} y={getY(val) + 3} fontSize="7.5" fontWeight="bold" fill="#64748B" textAnchor="end">{val}</text>
               </g>
             ))}
 
-            {/* Label Sumbu X Usia (Bulan) */}
+            {/* Grid Interval Vertikal & Label Usia */}
             {ages.filter(a => a % 2 === 0).map(a => (
               <g key={`x-age-${a}`}>
+                <line x1={getX(a)} y1={padT} x2={getX(a)} y2={h - padB} stroke="#E2E8F0" strokeWidth="0.6" strokeDasharray="2,4" />
                 <line x1={getX(a)} y1={h - padB} x2={getX(a)} y2={h - padB + 4} stroke="#475569" strokeWidth="1.2" />
-                <text x={getX(a)} y={h - padB + 12} fontSize="7.5" fontWeight="bold" fill="#475569" textAnchor="middle">{a}</text>
-                {/* Target KBM di bawah sumbu usia */}
+                <text x={getX(a)} y={h - padB + 13} fontSize="7.5" fontWeight="bold" fill="#475569" textAnchor="middle">{a}</text>
+                {/* Target KBM di bawah usia */}
                 {a > 0 && (
-                  <text x={getX(a)} y={h - padB + 22} fontSize="6" fontWeight="bold" fill="#0D9488" textAnchor="middle">
+                  <text x={getX(a)} y={h - padB + 23} fontSize="6" fontWeight="bold" fill="#0D9488" textAnchor="middle">
                     {getKBM(a)}g
                   </text>
                 )}
               </g>
             ))}
 
-            {/* Label Sumbu */}
-            <text x={padL - 6} y={padT - 6} fontSize="7.5" fontWeight="bold" fill="#0F766E">kg</text>
-            <text x={w - padR + 10} y={h - padB + 12} fontSize="7" fontWeight="bold" fill="#64748B">bln</text>
+            {/* Sumbu X & Y Utama */}
+            <line x1={padL} y1={h - padB} x2={w - padR} y2={h - padB} stroke="#475569" strokeWidth="1.2" />
+            <line x1={padL} y1={padT} x2={padL} y2={h - padB} stroke="#475569" strokeWidth="1.2" />
 
-            {/* 7. Garis Plotting Riil Pertumbuhan Anak KMS */}
+            {/* Keterangan Sumbu */}
+            <text x={padL - 6} y={padT - 6} fontSize="8" fontWeight="bold" fill="#0F766E">kg</text>
+            <text x={w - padR + 10} y={h - padB + 13} fontSize="7" fontWeight="bold" fill="#64748B">bln</text>
+
+            {/* 7. GARIS TUNGGAL UTAMA: PLOTTING PERTUMBUHAN BALITA (SATU-SATUNYA GARIS SOLID TEBAL) */}
             {childPoints.length > 1 && (
               <polyline
                 fill="none"
-                stroke="#0F172A"
-                strokeWidth="3.2"
+                stroke="#0F766E"
+                strokeWidth="3.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 points={childPolyline}
               />
             )}
 
-            {/* Titik Plotting Anak */}
+            {/* Titik Plotting Balita dengan Label Angka Bersih Berjarak */}
             {childPoints.map((p, idx) => (
-              <g key={`child-pt-${idx}`}>
-                <circle cx={p.x} cy={p.y} r="4.5" fill="#FFFFFF" stroke="#0F172A" strokeWidth="2.8" />
-                <text x={p.x} y={p.y - 7} fontSize="8.5" fontWeight="900" fill="#0F172A" textAnchor="middle">
+              <g key={`child-bb-pt-${idx}`}>
+                <circle cx={p.x} cy={p.y} r="5" fill="#FFFFFF" stroke="#0F766E" strokeWidth="3" />
+                {/* Halo stroke putih pada angka agar tidak bertabrakan dengan garis di belakangnya */}
+                <text
+                  x={p.x}
+                  y={p.y - 10}
+                  fontSize="8.5"
+                  fontWeight="900"
+                  fill="#0F766E"
+                  textAnchor="middle"
+                  paintOrder="stroke"
+                  stroke="#FFFFFF"
+                  strokeWidth="3"
+                  strokeLinejoin="round"
+                >
                   {p.val}
                 </text>
               </g>
@@ -292,22 +293,22 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
 
         {/* Legenda Warna KMS Resmi */}
         <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200/80 space-y-1 text-[10px]">
-          <div className="flex items-center justify-between font-bold text-slate-700">
+          <div className="flex items-center justify-between font-bold text-slate-700 flex-wrap gap-2">
             <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-[#A7F3D0] border border-[#059669]" />
+              <span className="w-2.5 h-2.5 rounded-sm bg-[#BBF7D0] border border-[#10B981]" />
               <span>Hijau: Normal / Ideal (KMS)</span>
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-sm bg-[#FEF08A] border border-[#CA8A04]" />
-              <span>Kuning: Waspada / Kurang</span>
+              <span>Kuning: Waspada Kurang</span>
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-[#FEE2E2] border border-[#DC2626]" />
-              <span>Garis Merah: BGM</span>
+              <span className="w-2.5 h-2.5 rounded-sm bg-[#FEE2E2] border border-[#EF4444]" />
+              <span>Merah: Bawah Garis Merah (BGM)</span>
             </span>
           </div>
           <p className="text-[10px] text-slate-500 italic text-center pt-0.5">
-            * Angka hijau di bawah sumbu adalah target Kenaikan Berat Badan Minimal (KBM) per bulan.
+            * Garis tosca tunggal adalah kurva pertumbuhan balita. Angka hijau di bawah adalah target kenaikan berat minimal (KBM).
           </p>
         </div>
       </div>
@@ -320,7 +321,7 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
     const maxAge = Math.max(12, ...history.map(h => h.usia || 0));
     const plotAgeLimit = Math.min(24, Math.max(maxAge + 1, 12));
 
-    const w = 360, h = 210, padL = 38, padR = 24, padT = 20, padB = 30;
+    const w = 360, h = 210, padL = 38, padR = 24, padT = 24, padB = 30;
     const plotW = w - padL - padR;
     const plotH = h - padT - padB;
 
@@ -333,13 +334,8 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
 
     const ages = Array.from({ length: plotAgeLimit + 1 }, (_, i) => i);
 
-    // +3 SD (Tinggi)
     const ptsPlus3 = ages.map(a => `${getX(a).toFixed(1)},${getY(refList[a][0] + 3 * refList[a][1]).toFixed(1)}`);
-    // Median (Tinggi Ideal)
-    const ptsMedian = ages.map(a => `${getX(a).toFixed(1)},${getY(refList[a][0]).toFixed(1)}`);
-    // -2 SD (Batas Normal Bawah / Batas Stunting)
     const ptsMinus2 = ages.map(a => `${getX(a).toFixed(1)},${getY(refList[a][0] - 2 * refList[a][1]).toFixed(1)}`);
-    // -3 SD (Garis Merah Sangat Pendek / Severely Stunted)
     const ptsMinus3 = ages.map(a => `${getX(a).toFixed(1)},${getY(refList[a][0] - 3 * refList[a][1]).toFixed(1)}`);
 
     // Titik Plotting Balita Riil
@@ -356,26 +352,26 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
     const childPolyline = childPoints.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
 
     return (
-      <div className="bg-white p-4 rounded-3xl border border-slate-200/90 shadow-warm-card space-y-3">
+      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-warm-card space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" />
-              <h4 className="font-extrabold text-slate-900 text-sm">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block" />
+              <h4 className="font-extrabold text-slate-900 text-sm sm:text-base">
                 Grafik KMS Panjang/Tinggi Badan (TB/U)
               </h4>
             </div>
             <p className="text-[11px] text-slate-500">
-              Kurva Pertumbuhan Standar Stunting Kemenkes RI ({isMale ? 'Anak Laki-Laki' : 'Anak Perempuan'})
+              Pita Pertumbuhan Standar Stunting Kemenkes RI ({isMale ? 'Laki-Laki' : 'Perempuan'})
             </p>
           </div>
           <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
-            KMS Aktif
+            KMS Stunting
           </span>
         </div>
 
         {/* SVG Canvas KMS TB */}
-        <div className="w-full h-56 relative bg-[#FAFAF9] rounded-2xl border border-slate-200/70 overflow-hidden p-1">
+        <div className="w-full h-56 relative bg-[#FCFBF9] rounded-2xl border border-slate-200/80 overflow-hidden p-1 shadow-inner">
           <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full select-none" role="img" aria-label="Grafik KMS Tinggi Badan">
             {/* 1. Area Merah: Sangat Pendek / Severely Stunted (< -3 SD) */}
             <polygon
@@ -389,58 +385,67 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
               points={`${ptsMinus3.join(' ')} ${[...ptsMinus2].reverse().join(' ')}`}
             />
 
-            {/* 3. Area Hijau: Tinggi Normal (-2 SD s.d. +3 SD) */}
+            {/* 3. Area Hijau: Tinggi Badan Normal (-2 SD s.d. +3 SD) */}
             <polygon
-              fill="#D1FAE5"
+              fill="#DCFCE7"
               points={`${ptsMinus2.join(' ')} ${[...ptsPlus3].reverse().join(' ')}`}
             />
 
-            {/* Garis Batas */}
-            <polyline fill="none" stroke="#DC2626" strokeWidth="2" strokeDasharray="3,2" points={ptsMinus3.join(' ')} />
-            <polyline fill="none" stroke="#CA8A04" strokeWidth="1.5" points={ptsMinus2.join(' ')} />
-            <polyline fill="none" stroke="#059669" strokeWidth="2.5" points={ptsMedian.join(' ')} />
-            <polyline fill="none" stroke="#2563EB" strokeWidth="1.5" points={ptsPlus3.join(' ')} />
+            {/* Garis Batas Merah Bawah (< -3 SD): Garis putus-putus merah tipis tegas */}
+            <polyline fill="none" stroke="#EF4444" strokeWidth="1.2" strokeDasharray="4,2.5" points={ptsMinus3.join(' ')} />
 
-            {/* Grid & Sumbu X/Y */}
-            <line x1={padL} y1={h - padB} x2={w - padR} y2={h - padB} stroke="#475569" strokeWidth="1.5" />
-            <line x1={padL} y1={padT} x2={padL} y2={h - padB} stroke="#475569" strokeWidth="1.5" />
-
-            {/* Label Sumbu Y (cm) */}
+            {/* Grid Interval Horizontal Halus */}
             {[50, 60, 70, 80, 90].map(val => (
               <g key={`y-tb-${val}`}>
-                <line x1={padL - 3} y1={getY(val)} x2={w - padR} y2={getY(val)} stroke="#E2E8F0" strokeDasharray="2,3" />
-                <text x={padL - 4} y={getY(val) + 3} fontSize="7.5" fontWeight="bold" fill="#64748B" textAnchor="end">{val}</text>
+                <line x1={padL} y1={getY(val)} x2={w - padR} y2={getY(val)} stroke="#E2E8F0" strokeWidth="0.8" strokeDasharray="3,3" />
+                <text x={padL - 5} y={getY(val) + 3} fontSize="7.5" fontWeight="bold" fill="#64748B" textAnchor="end">{val}</text>
               </g>
             ))}
 
-            {/* Label Sumbu X Usia (Bulan) */}
+            {/* Grid Interval Vertikal & Label Usia */}
             {ages.filter(a => a % 2 === 0).map(a => (
               <g key={`x-age-tb-${a}`}>
+                <line x1={getX(a)} y1={padT} x2={getX(a)} y2={h - padB} stroke="#E2E8F0" strokeWidth="0.6" strokeDasharray="2,4" />
                 <line x1={getX(a)} y1={h - padB} x2={getX(a)} y2={h - padB + 4} stroke="#475569" strokeWidth="1.2" />
-                <text x={getX(a)} y={h - padB + 12} fontSize="7.5" fontWeight="bold" fill="#475569" textAnchor="middle">{a}</text>
+                <text x={getX(a)} y={h - padB + 13} fontSize="7.5" fontWeight="bold" fill="#475569" textAnchor="middle">{a}</text>
               </g>
             ))}
 
-            <text x={padL - 6} y={padT - 6} fontSize="7.5" fontWeight="bold" fill="#2563EB">cm</text>
-            <text x={w - padR + 10} y={h - padB + 12} fontSize="7" fontWeight="bold" fill="#64748B">bln</text>
+            {/* Sumbu X & Y Utama */}
+            <line x1={padL} y1={h - padB} x2={w - padR} y2={h - padB} stroke="#475569" strokeWidth="1.2" />
+            <line x1={padL} y1={padT} x2={padL} y2={h - padB} stroke="#475569" strokeWidth="1.2" />
 
-            {/* Garis Plotting Riil Tinggi Badan */}
+            <text x={padL - 6} y={padT - 6} fontSize="8" fontWeight="bold" fill="#2563EB">cm</text>
+            <text x={w - padR + 10} y={h - padB + 13} fontSize="7" fontWeight="bold" fill="#64748B">bln</text>
+
+            {/* 4. GARIS TUNGGAL UTAMA: PLOTTING TINGGI BADAN BALITA (SATU-SATUNYA GARIS SOLID TEBAL) */}
             {childPoints.length > 1 && (
               <polyline
                 fill="none"
                 stroke="#1D4ED8"
-                strokeWidth="3.2"
+                strokeWidth="3.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 points={childPolyline}
               />
             )}
 
-            {/* Titik Plotting Anak */}
+            {/* Titik Plotting Balita dengan Label Angka Bersih Berjarak */}
             {childPoints.map((p, idx) => (
               <g key={`child-tb-pt-${idx}`}>
-                <circle cx={p.x} cy={p.y} r="4.5" fill="#FFFFFF" stroke="#1D4ED8" strokeWidth="2.8" />
-                <text x={p.x} y={p.y - 7} fontSize="8.5" fontWeight="900" fill="#1D4ED8" textAnchor="middle">
+                <circle cx={p.x} cy={p.y} r="5" fill="#FFFFFF" stroke="#1D4ED8" strokeWidth="3" />
+                <text
+                  x={p.x}
+                  y={p.y - 10}
+                  fontSize="8.5"
+                  fontWeight="900"
+                  fill="#1D4ED8"
+                  textAnchor="middle"
+                  paintOrder="stroke"
+                  stroke="#FFFFFF"
+                  strokeWidth="3"
+                  strokeLinejoin="round"
+                >
                   {p.val}
                 </text>
               </g>
@@ -449,17 +454,17 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
         </div>
 
         {/* Legenda Warna KMS TB */}
-        <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200/80 flex items-center justify-between font-bold text-slate-700 text-[10px]">
+        <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200/80 flex items-center justify-between font-bold text-slate-700 text-[10px] flex-wrap gap-2">
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-[#D1FAE5] border border-[#059669]" />
-            <span>Hijau: Normal (Ideal)</span>
+            <span className="w-2.5 h-2.5 rounded-sm bg-[#DCFCE7] border border-[#10B981]" />
+            <span>Hijau: Normal</span>
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-sm bg-[#FEF08A] border border-[#CA8A04]" />
             <span>Kuning: Pendek (Stunted)</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-[#FEE2E2] border border-[#DC2626]" />
+            <span className="w-2.5 h-2.5 rounded-sm bg-[#FEE2E2] border border-[#EF4444]" />
             <span>Merah: Sangat Pendek</span>
           </span>
         </div>
@@ -579,51 +584,38 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
         </span>
       </div>
 
-      {/* Tab Switcher Grafik KMS */}
-      <div className="bg-slate-100 p-1.5 rounded-2xl flex gap-1 text-xs font-bold shadow-2xs">
+      {/* 3. REVISI PERMINTAAN 3: TAB SWITCHER HANYA 2 PILIHAN (BB VS TB), LEGA & PROPORSIONAL */}
+      <div className="bg-slate-100 p-1.5 rounded-2xl flex gap-2 text-xs sm:text-sm font-bold shadow-2xs">
         <button
           type="button"
           onClick={() => setActiveTab('bb')}
-          className={`flex-1 py-2 rounded-xl transition flex items-center justify-center gap-1.5 ${
+          className={`flex-1 py-3 px-4 rounded-xl transition-all duration-150 flex items-center justify-center gap-2.5 ${
             activeTab === 'bb'
-              ? 'bg-teal-700 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900'
+              ? 'bg-teal-700 text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
           }`}
         >
-          <Scale className="w-3.5 h-3.5" />
-          <span>KMS Berat Badan</span>
+          <Scale className="w-4 h-4 flex-shrink-0" />
+          <span>KMS Berat Badan (BB)</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('tb')}
-          className={`flex-1 py-2 rounded-xl transition flex items-center justify-center gap-1.5 ${
+          className={`flex-1 py-3 px-4 rounded-xl transition-all duration-150 flex items-center justify-center gap-2.5 ${
             activeTab === 'tb'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900'
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
           }`}
         >
-          <Ruler className="w-3.5 h-3.5" />
-          <span>KMS Tinggi Badan</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('both')}
-          className={`flex-1 py-2 rounded-xl transition flex items-center justify-center gap-1.5 ${
-            activeTab === 'both'
-              ? 'bg-slate-800 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <span>Kedua Grafik</span>
+          <Ruler className="w-4 h-4 flex-shrink-0" />
+          <span>KMS Tinggi Badan (TB)</span>
         </button>
       </div>
 
-      {/* Render Grafik KMS Berdasarkan Pilihan Tab */}
-      <div className="space-y-4">
-        {(activeTab === 'bb' || activeTab === 'both') && renderKMSBeratBadanChart()}
-        {(activeTab === 'tb' || activeTab === 'both') && renderKMSTinggiBadanChart()}
+      {/* Render Grafik KMS Berdasarkan Pilihan Tab (Hanya 1 grafik aktif dalam satu waktu) */}
+      <div className="pt-1">
+        {activeTab === 'bb' ? renderKMSBeratBadanChart() : renderKMSTinggiBadanChart()}
       </div>
     </div>
   );
