@@ -172,7 +172,7 @@ function AppContent() {
     <div className="min-h-screen w-full bg-slate-50 text-slate-800 flex flex-col overflow-x-hidden antialiased">
       {/* Top Header - Responsif Melebar di Tablet & Desktop */}
       <header className="sticky top-0 z-40 bg-posyandu-700 text-white shadow-md w-full">
-        <div className="w-full max-w-6xl mx-auto px-4 sm:px-8 py-3 flex items-center justify-between gap-3">
+        <div className="w-full max-w-6xl mx-auto px-4 sm:px-8 py-3.5 flex items-center justify-between gap-4 sm:gap-6">
           {/* Posyandu Active & Switch Stand Button */}
           <div className="flex items-center gap-2 min-w-0">
             <button
@@ -216,7 +216,7 @@ function AppContent() {
       </header>
 
       {/* Main Content Area */}
-      <main id="appMainScroll" className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-5 pb-28 overflow-y-auto no-scrollbar">
+      <main id="appMainScroll" className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-6 pb-32 overflow-y-auto no-scrollbar">
         {activeTab === 'beranda' && <Beranda />}
         {activeTab === 'buku-data' && (
           <BukuData
@@ -233,7 +233,7 @@ function AppContent() {
       </main>
 
       {/* Bottom Navigation Bar - Full Width di Mobile, Floating Capsule Elegan di Tablet & Laptop */}
-      <nav className="fixed bottom-0 sm:bottom-4 left-0 right-0 sm:left-auto sm:right-auto sm:inset-x-0 sm:max-w-xl sm:mx-auto h-16 sm:h-14 bg-white/95 sm:bg-white/90 backdrop-blur-md border-t sm:border border-slate-200/90 sm:rounded-2xl z-40 shadow-lg sm:shadow-xl w-full flex items-center">
+      <nav className="fixed bottom-0 sm:bottom-5 left-0 right-0 sm:left-auto sm:right-auto sm:inset-x-0 sm:max-w-lg sm:mx-auto h-16 sm:h-15 bg-white/95 sm:bg-white/90 backdrop-blur-md border-t sm:border border-slate-200/90 sm:rounded-2xl z-40 shadow-lg sm:shadow-xl w-full flex items-center">
         <div className="w-full h-full flex items-center justify-around px-2">
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
