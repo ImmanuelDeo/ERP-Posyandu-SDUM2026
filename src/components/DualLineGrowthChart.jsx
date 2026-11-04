@@ -1,5 +1,5 @@
 // src/components/DualLineGrowthChart.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import {
   TrendingUp,
   ArrowUpRight,
@@ -12,15 +12,15 @@ import {
 import { evaluateGrowthKMS } from '../utils/kemenkesStandards';
 
 /**
- * Komponen Dual Line Growth Chart & Perbandingan 4 Metrik Fisik:
- * 1. Visualisasi Grafik: Khusus TB & BB saja (Dual Line SVG).
- * 2. Kartu Perbandingan Lengkap: BB, TB, Lingkar Kepala (LK), dan Lingkar Lengan (LiLA)
- *    dengan logic indikator:
- *    - Naik (diff > 0): Panah atas hijau/biru/teal
- *    - Turun (diff < 0): Panah bawah merah/rose
- *    - Tetap / Tidak Naik (diff === 0): Indikator NETRAL (abu-abu/slate dengan icon minus)
+ * Komponen Grafik Pertumbuhan Terpisah (Bukan Dual Chart):
+ * 1. Grafik Simulasi Berat Badan (BB dlm kg) - Terpisah
+ * 2. Grafik Simulasi Tinggi Badan (TB dlm cm) - Terpisah
+ * 3. Dilengkapi tab switcher: [Berat Badan] | [Tinggi Badan] | [Lihat Keduanya]
+ * 4. Kartu perbandingan kenaikan/penurunan (BB, TB, LK, LiLA) dengan indikator netral bila tetap.
  */
 export default function DualLineGrowthChart({ history = [] }) {
+  const [activeChart, setActiveChart] = useState('bb'); // 'bb' | 'tb' | 'both'
+
   if (!history || history.length === 0) {
     return (
       <div className="bg-white p-6 rounded-2xl border border-slate-200 text-center text-slate-400 text-xs">
@@ -70,34 +70,98 @@ export default function DualLineGrowthChart({ history = [] }) {
     );
   };
 
-  // SVG Dual Axis Chart Math (KHUSUS TB & BB SAJA)
-  const bbValues = history.map(h => h.bb || 0);
-  const tbValues = history.map(h => h.tb || 0);
+  // Helper render Grafik Tunggal (Single Axis Terpisah)
+  const renderSingleChart = (metricKey, title, unit, strokeColor, fillColor, minMargin = 0.9, maxMargin = 1.1) => {
+    const values = history.map(h => Number(h[metricKey]) || 0);
+    const rawMin = Math.min(...values);
+    const rawMax = Math.max(...values);
+    const minVal = Math.floor(rawMin * minMargin);
+    const maxVal = Math.ceil(rawMax * maxMargin);
+    const range = Math.max(0.2, maxVal - minVal);
 
-  const minBB = Math.floor(Math.min(...bbValues) * 0.9);
-  const maxBB = Math.ceil(Math.max(...bbValues) * 1.1);
+    const w = 340, h = 150, padL = 36, padR = 20, padT = 20, padB = 26;
+    const plotW = w - padL - padR;
+    const plotH = h - padT - padB;
 
-  const minTB = Math.floor(Math.min(...tbValues) * 0.92);
-  const maxTB = Math.ceil(Math.max(...tbValues) * 1.08);
+    const points = history.map((item, idx) => {
+      const val = Number(item[metricKey]) || 0;
+      const x = padL + (history.length === 1 ? plotW / 2 : (idx / (history.length - 1)) * plotW);
+      const y = padT + plotH - ((val - minVal) / range) * plotH;
+      return { x, y, val, usia: item.usia, tgl: item.tgl };
+    });
 
-  const w = 340, h = 175, padL = 34, padR = 34, padT = 24, padB = 28;
-  const plotW = w - padL - padR;
-  const plotH = h - padT - padB;
+    const polylineStr = points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
 
-  const pointsBB = history.map((item, idx) => {
-    const x = padL + (history.length === 1 ? plotW / 2 : (idx / (history.length - 1)) * plotW);
-    const y = padT + plotH - ((item.bb - minBB) / Math.max(0.1, maxBB - minBB)) * plotH;
-    return { x, y, val: item.bb, usia: item.usia, tgl: item.tgl };
-  });
+    return (
+      <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+              <span>{title}</span>
+              <span className="text-[10px] font-semibold text-slate-400">({unit})</span>
+            </h4>
+            <p className="text-[10px] text-slate-500">
+              Riwayat simulasi pertumbuhan per bulan
+            </p>
+          </div>
+          <span className="text-xs font-black px-2 py-0.5 rounded-lg border bg-slate-50 text-slate-700">
+            Terakhir: <strong>{latest[metricKey]} {unit}</strong>
+          </span>
+        </div>
 
-  const pointsTB = history.map((item, idx) => {
-    const x = padL + (history.length === 1 ? plotW / 2 : (idx / (history.length - 1)) * plotW);
-    const y = padT + plotH - ((item.tb - minTB) / Math.max(0.1, maxTB - minTB)) * plotH;
-    return { x, y, val: item.tb, usia: item.usia, tgl: item.tgl };
-  });
+        <div className="w-full h-40 relative">
+          <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full select-none" role="img" aria-label={title}>
+            {/* Gridlines */}
+            <line x1={padL} y1={padT} x2={w - padR} y2={padT} stroke="#f1f5f9" strokeDasharray="3,3" />
+            <line x1={padL} y1={padT + plotH / 2} x2={w - padR} y2={padT + plotH / 2} stroke="#f1f5f9" strokeDasharray="3,3" />
+            <line x1={padL} y1={h - padB} x2={w - padR} y2={h - padB} stroke="#e2e8f0" strokeWidth="1.5" />
 
-  const polyBB = pointsBB.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-  const polyTB = pointsTB.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+            {/* Sumbu Label Nilai Kiri */}
+            <text x={padL - 4} y={padT + 4} fontSize="8" fontWeight="bold" fill="#64748b" textAnchor="end">{maxVal}{unit}</text>
+            <text x={padL - 4} y={padT + plotH / 2 + 3} fontSize="8" fontWeight="bold" fill="#94a3b8" textAnchor="end">{((maxVal + minVal) / 2).toFixed(1)}</text>
+            <text x={padL - 4} y={h - padB} fontSize="8" fontWeight="bold" fill="#64748b" textAnchor="end">{minVal}{unit}</text>
+
+            {/* Area Shading Gradient */}
+            {points.length > 1 && (
+              <polygon
+                fill={fillColor}
+                points={`${points[0].x},${h - padB} ${polylineStr} ${points[points.length - 1].x},${h - padB}`}
+              />
+            )}
+
+            {/* Garis Tren */}
+            {points.length > 1 && (
+              <polyline
+                fill="none"
+                stroke={strokeColor}
+                strokeWidth="3.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                points={polylineStr}
+              />
+            )}
+
+            {/* Titik Data */}
+            {points.map((p, idx) => (
+              <g key={`pt-${idx}`}>
+                <circle cx={p.x} cy={p.y} r="4" fill="#ffffff" stroke={strokeColor} strokeWidth="2.5" />
+                <text x={p.x} y={p.y - 7} fontSize="8.5" fontWeight="800" fill={strokeColor} textAnchor="middle">
+                  {p.val}
+                </text>
+                <text x={p.x} y={h - 9} fontSize="8" fontWeight="600" fill="#64748b" textAnchor="middle">
+                  {p.usia}bl
+                </text>
+              </g>
+            ))}
+          </svg>
+        </div>
+        <div className="flex items-center justify-between text-[10px] text-slate-400 px-1">
+          <span>Titik atas: Nilai {unit}</span>
+          <span>Sumbu bawah: Usia (bl = bulan)</span>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-3">
@@ -210,106 +274,70 @@ export default function DualLineGrowthChart({ history = [] }) {
         </span>
       </div>
 
-      {/* SVG Dual Line Chart Container (HANYA UNTUK TB & BB SAJA) */}
-      <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
-        <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
-          <div>
-            <h3 className="font-extrabold text-slate-900 text-xs sm:text-sm">
-              Grafik Pertumbuhan TB & BB (Dual Line)
-            </h3>
-            <p className="text-[10px] text-slate-500">
-              Visualisasi tren berat (kg) & tinggi (cm) balita dari bulan ke bulan
-            </p>
-          </div>
+      {/* Tab Switcher: Pilihan Grafik Terpisah */}
+      <div className="bg-slate-100 p-1 rounded-xl flex gap-1 text-xs font-bold">
+        <button
+          type="button"
+          onClick={() => setActiveChart('bb')}
+          className={`flex-1 py-1.5 rounded-lg transition flex items-center justify-center gap-1.5 ${
+            activeChart === 'bb'
+              ? 'bg-teal-700 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Scale className="w-3.5 h-3.5" />
+          <span>Grafik BB (kg)</span>
+        </button>
 
-          {/* Legend */}
-          <div className="flex items-center gap-3 text-[11px] font-bold">
-            <span className="flex items-center gap-1.5 text-teal-700">
-              <span className="w-3 h-1.5 bg-teal-600 rounded-full inline-block" />
-              <span>BB (kg)</span>
-            </span>
-            <span className="flex items-center gap-1.5 text-blue-700">
-              <span className="w-3 h-1.5 bg-blue-600 rounded-full inline-block" />
-              <span>TB (cm)</span>
-            </span>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={() => setActiveChart('tb')}
+          className={`flex-1 py-1.5 rounded-lg transition flex items-center justify-center gap-1.5 ${
+            activeChart === 'tb'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Ruler className="w-3.5 h-3.5" />
+          <span>Grafik TB (cm)</span>
+        </button>
 
-        {/* The Graphic Canvas */}
-        <div className="w-full h-44 relative">
-          <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full select-none" role="img" aria-label="Grafik Dual Line TB dan BB">
-            {/* Gridlines */}
-            <line x1={padL} y1={padT} x2={w - padR} y2={padT} stroke="#f1f5f9" strokeDasharray="3,3" />
-            <line x1={padL} y1={padT + plotH / 2} x2={w - padR} y2={padT + plotH / 2} stroke="#f1f5f9" strokeDasharray="3,3" />
-            <line x1={padL} y1={h - padB} x2={w - padR} y2={h - padB} stroke="#e2e8f0" strokeWidth="1.5" />
+        <button
+          type="button"
+          onClick={() => setActiveChart('both')}
+          className={`flex-1 py-1.5 rounded-lg transition flex items-center justify-center gap-1.5 ${
+            activeChart === 'both'
+              ? 'bg-slate-800 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <span>Keduanya</span>
+        </button>
+      </div>
 
-            {/* Sumbu Label Kiri (BB - kg) & Kanan (TB - cm) */}
-            <text x={padL - 4} y={padT + 4} fontSize="8" fontWeight="bold" fill="#0d9488" textAnchor="end">{maxBB}kg</text>
-            <text x={padL - 4} y={h - padB} fontSize="8" fontWeight="bold" fill="#0d9488" textAnchor="end">{minBB}kg</text>
+      {/* Render Grafik Terpisah Sesuai Pilihan Tab */}
+      <div className="space-y-3">
+        {(activeChart === 'bb' || activeChart === 'both') &&
+          renderSingleChart(
+            'bb',
+            'Grafik Simulasi Berat Badan (BB)',
+            'kg',
+            '#0d9488',
+            'rgba(13, 148, 136, 0.08)',
+            0.9,
+            1.1
+          )}
 
-            <text x={w - padR + 4} y={padT + 4} fontSize="8" fontWeight="bold" fill="#2563eb" textAnchor="start">{maxTB}cm</text>
-            <text x={w - padR + 4} y={h - padB} fontSize="8" fontWeight="bold" fill="#2563eb" textAnchor="start">{minTB}cm</text>
-
-            {/* Shading Area di bawah BB */}
-            {pointsBB.length > 1 && (
-              <polygon
-                fill="rgba(13, 148, 136, 0.08)"
-                points={`${pointsBB[0].x},${h - padB} ${polyBB} ${pointsBB[pointsBB.length - 1].x},${h - padB}`}
-              />
-            )}
-
-            {/* Garis 1: Berat Badan (Teal) */}
-            {pointsBB.length > 1 && (
-              <polyline
-                fill="none"
-                stroke="#0d9488"
-                strokeWidth="3.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                points={polyBB}
-              />
-            )}
-
-            {/* Garis 2: Tinggi Badan (Blue) */}
-            {pointsTB.length > 1 && (
-              <polyline
-                fill="none"
-                stroke="#2563eb"
-                strokeWidth="2.8"
-                strokeDasharray="5,2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                points={polyTB}
-              />
-            )}
-
-            {/* Titik-Titik Data BB */}
-            {pointsBB.map((p, idx) => (
-              <g key={`bb-${idx}`}>
-                <circle cx={p.x} cy={p.y} r="4" fill="#ffffff" stroke="#0d9488" strokeWidth="2.5" />
-                <text x={p.x} y={p.y - 7} fontSize="8" fontWeight="800" fill="#0f766e" textAnchor="middle">
-                  {p.val}
-                </text>
-                <text x={p.x} y={h - 10} fontSize="8" fontWeight="600" fill="#64748b" textAnchor="middle">
-                  {p.usia}bl
-                </text>
-              </g>
-            ))}
-
-            {/* Titik-Titik Data TB */}
-            {pointsTB.map((p, idx) => (
-              <g key={`tb-${idx}`}>
-                <circle cx={p.x} cy={p.y} r="3.5" fill="#ffffff" stroke="#2563eb" strokeWidth="2" />
-                <text x={p.x} y={p.y + 11} fontSize="8" fontWeight="800" fill="#1d4ed8" textAnchor="middle">
-                  {p.val}
-                </text>
-              </g>
-            ))}
-          </svg>
-        </div>
-        <p className="text-[10px] text-slate-400 text-center italic">
-          * Grafik fokus pada validasi TB & BB. Parameter Lingkar Kepala & Lengan tertera pada kartu di atas dan tabel di bawah.
-        </p>
+        {(activeChart === 'tb' || activeChart === 'both') &&
+          renderSingleChart(
+            'tb',
+            'Grafik Simulasi Tinggi Badan (TB)',
+            'cm',
+            '#2563eb',
+            'rgba(37, 99, 235, 0.08)',
+            0.92,
+            1.08
+          )}
       </div>
     </div>
   );
