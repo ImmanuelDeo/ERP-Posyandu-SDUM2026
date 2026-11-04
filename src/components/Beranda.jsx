@@ -23,9 +23,9 @@ export default function Beranda() {
   const maleDash = ((lPct / 100) * circumference).toFixed(1);
 
   return (
-    <section className="space-y-4" id="beranda">
+    <section className="space-y-6" id="beranda">
       {/* Monthly Header Banner */}
-      <div className="bg-gradient-to-r from-posyandu-700 via-posyandu-600 to-teal-500 rounded-2xl p-4 sm:p-5 text-white shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div className="bg-gradient-to-r from-posyandu-700 via-posyandu-600 to-teal-500 rounded-3xl p-5 sm:p-7 text-white shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4 sm:gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-[10px] uppercase tracking-wider font-extrabold text-teal-100 bg-white/15 px-2 py-0.5 rounded-full inline-block">
@@ -54,7 +54,7 @@ export default function Beranda() {
       </div>
 
       {/* 4 Metric Cards Grid - Fully Responsive */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
         <MetricCard
           title="Total Balita"
           value={total}
@@ -97,9 +97,9 @@ export default function Beranda() {
       </div>
 
       {/* Analytics Demografi Row - Side-by-Side balanced on all screens */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Card 1: Donut Chart Jenis Kelamin */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div>
               <h3 className="font-extrabold text-sm text-slate-800">Komposisi Jenis Kelamin</h3>
@@ -111,7 +111,7 @@ export default function Beranda() {
           </div>
 
           {/* Donut Graphic */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 my-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8 my-5">
             <div className="relative w-32 h-32 flex-shrink-0 flex items-center justify-center">
               <svg viewBox="0 0 140 140" className="w-full h-full -rotate-90">
                 {/* Female Arc (Base Pink) */}
@@ -163,7 +163,7 @@ export default function Beranda() {
         </div>
 
         {/* Card 2: Distribusi Kelompok Usia */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div>
               <h3 className="font-extrabold text-sm text-slate-800">Distribusi Kelompok Usia</h3>
@@ -207,7 +207,7 @@ export default function Beranda() {
       </div>
 
       {/* Quick Summary Note for Kader */}
-      <div className="bg-slate-100/80 rounded-2xl p-3.5 border border-slate-200 text-xs text-slate-600 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 text-xs text-slate-600 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
         <div className="flex items-center gap-2">
           <FileSpreadsheet className="w-4 h-4 text-teal-700 flex-shrink-0" />
           <span>
@@ -224,14 +224,14 @@ export default function Beranda() {
 
 function MetricCard({ title, value, unit, subtitle, icon, iconBg, iconColor, valueColor = "text-slate-900", highlightSubtitle }) {
   return (
-    <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+    <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col justify-between transition hover:shadow-sm">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-bold text-slate-500">{title}</span>
+        <span className="text-xs font-bold text-slate-500 tracking-wide">{title}</span>
         <span className={`p-1.5 ${iconBg} ${iconColor} rounded-xl`}>{icon}</span>
       </div>
       <div className="mt-2">
         <div className="flex items-baseline gap-1">
-          <span className={`text-2xl sm:text-3xl font-black leading-none ${valueColor}`}>{value}</span>
+          <span className={`text-2xl sm:text-3xl font-black tracking-tight ${valueColor}`}>{value}</span>
           {unit && <span className="text-xs text-slate-400 font-medium">{unit}</span>}
         </div>
         <p className={`text-[11px] mt-1 line-clamp-1 ${highlightSubtitle ? 'text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded-md inline-block' : 'text-slate-400 font-medium'}`}>
