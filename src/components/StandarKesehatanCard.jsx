@@ -11,22 +11,22 @@ import {
   getBBUCategory,
   getTBUCategory,
   getBBTBCategory,
-  evaluateGrowthKMS,
-  getLilaCategory,
-  getLKCategory
+  evaluateGrowthKMS
 } from '../utils/kemenkesStandards';
 
 /**
- * Grouping Kategori Standar Kesehatan Anak
- * Bersumber dari Buku KIA (Kesehatan Ibu dan Anak) Kemenkes RI / Permenkes No. 2 Tahun 2020
+ * Grouping Kategori Standar Kesehatan Anak (Kemenkes RI)
+ * Berfokus pada 4 parameter antropometri inti:
+ * 1. BB/U (Berat Badan Menurut Usia)
+ * 2. TB/U (Tinggi Badan Menurut Usia - Indikator Stunting)
+ * 3. BB/TB (Berat Menurut Tinggi Badan - Status Gizi / Wasting)
+ * 4. Pertumbuhan KMS (Evaluasi Kenaikan Berat Badan Minimal KBM)
  */
 export default function StandarKesehatanCard({ child, currentMeasurement, prevMeasurement }) {
   if (!currentMeasurement) return null;
 
   const bb = currentMeasurement.bb;
   const tb = currentMeasurement.tb;
-  const lk = currentMeasurement.lk;
-  const lila = currentMeasurement.lila;
   const usia = currentMeasurement.usia || child?.usiaBulan || 12;
   const gender = child?.gender || 'L';
 
@@ -34,8 +34,6 @@ export default function StandarKesehatanCard({ child, currentMeasurement, prevMe
   const tbu = getTBUCategory(tb, usia, gender);
   const bbtb = getBBTBCategory(bb, tb, gender);
   const kms = evaluateGrowthKMS(bb, prevMeasurement?.bb, usia);
-  const lilaCat = getLilaCategory(lila);
-  const lkCat = getLKCategory(lk, usia);
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-3.5 space-y-3">
@@ -59,7 +57,7 @@ export default function StandarKesehatanCard({ child, currentMeasurement, prevMe
         </span>
       </div>
 
-      {/* Grid 4 Indikator Utama */}
+      {/* Grid 4 Indikator Utama Kemenkes */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         {/* 1. Berat Badan Menurut Usia (BB/U) */}
         <div className={`p-2.5 rounded-xl border ${bbu.bg}`}>
@@ -119,18 +117,6 @@ export default function StandarKesehatanCard({ child, currentMeasurement, prevMe
           </div>
           <p className={`text-xs font-black mt-1 ${kms.color}`}>{kms.status}</p>
           <p className="text-[10px] text-slate-600 mt-0.5 leading-snug">{kms.label}</p>
-        </div>
-      </div>
-
-      {/* Baris Tambahan: LiLA & Lingkar Kepala */}
-      <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-[11px]">
-        <div className="bg-slate-50 p-2 rounded-lg border border-slate-200/80">
-          <span className="text-[9px] font-bold text-slate-500 uppercase block">LiLA ({lila} cm):</span>
-          <span className="font-bold text-slate-800">{lilaCat.label}</span>
-        </div>
-        <div className="bg-slate-50 p-2 rounded-lg border border-slate-200/80">
-          <span className="text-[9px] font-bold text-slate-500 uppercase block">Lingkar Kepala ({lk} cm):</span>
-          <span className="font-bold text-slate-800">{lkCat.label}</span>
         </div>
       </div>
     </div>
