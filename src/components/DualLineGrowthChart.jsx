@@ -474,98 +474,141 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
 
   return (
     <div className="space-y-5">
-      {/* Grid 4 Metrik Fisik (BB dengan GRAM, TB, LK, LiLA) */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+      {/* Grid 4 Metrik Fisik (BB dengan GRAM, TB, LK, LiLA) — Sejajar & Proporsional */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 items-stretch">
         {/* 1. Berat Badan (BB) - Kenaikan dlm SATUAN GRAM */}
-        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-teal-200/80 shadow-xs flex flex-col justify-between space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider flex items-center gap-1">
-              <Scale className="w-3.5 h-3.5 text-teal-600" />
-              <span>Berat Badan</span>
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-teal-200/80 shadow-xs flex flex-col justify-between min-h-[148px]">
+          {/* Header Card: Icon + Title + Badge Nilai */}
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] font-bold text-teal-800 uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <Scale className="w-3.5 h-3.5 text-teal-600 flex-shrink-0" />
+              <span className="truncate">Berat Badan</span>
             </span>
-            <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200">
+            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200 flex-shrink-0 whitespace-nowrap">
               {latest.bb} kg
             </span>
           </div>
-          <div className="mt-2">
+
+          {/* Nilai Besar */}
+          <div className="my-1.5">
             <div className="flex items-baseline gap-1">
-              <span className="text-xl font-black text-slate-900">{latest.bb}</span>
-              <span className="text-xs text-slate-500 font-semibold">kg</span>
+              <span className="text-2xl font-black text-slate-900 leading-none">{latest.bb}</span>
+              <span className="text-xs text-slate-500 font-bold">kg</span>
             </div>
-            {/* Indikator Selisih Murni dalam Satuan GRAM */}
-            <div className="mt-1.5 flex items-center justify-between flex-wrap gap-1">
+          </div>
+
+          {/* Footer Card: Delta + Bulan Lalu Terstruktur Sejajar */}
+          <div className="pt-1.5 border-t border-slate-100 flex flex-col xs:flex-row xs:items-center justify-between gap-1">
+            <div className="flex-shrink-0">
               {renderBBGramBadge()}
-              {prev && <span className="text-[9px] text-slate-400">bln lalu: {prev.bb} kg</span>}
             </div>
+            {prev && (
+              <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                bln lalu: <strong className="text-slate-600 font-semibold">{prev.bb} kg</strong>
+              </span>
+            )}
           </div>
         </div>
 
         {/* 2. Tinggi Badan (TB) */}
-        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-blue-200/80 shadow-xs flex flex-col justify-between space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-blue-800 uppercase tracking-wider flex items-center gap-1">
-              <Ruler className="w-3.5 h-3.5 text-blue-600" />
-              <span>Tinggi Badan</span>
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-blue-200/80 shadow-xs flex flex-col justify-between min-h-[148px]">
+          {/* Header Card */}
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] font-bold text-blue-800 uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <Ruler className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+              <span className="truncate">Tinggi Badan</span>
             </span>
-            <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 flex-shrink-0 whitespace-nowrap">
               {latest.tb} cm
             </span>
           </div>
-          <div className="mt-2">
+
+          {/* Nilai Besar */}
+          <div className="my-1.5">
             <div className="flex items-baseline gap-1">
-              <span className="text-xl font-black text-slate-900">{latest.tb}</span>
-              <span className="text-xs text-slate-500 font-semibold">cm</span>
+              <span className="text-2xl font-black text-slate-900 leading-none">{latest.tb}</span>
+              <span className="text-xs text-slate-500 font-bold">cm</span>
             </div>
-            <div className="mt-1.5 flex items-center justify-between flex-wrap gap-1">
+          </div>
+
+          {/* Footer Card */}
+          <div className="pt-1.5 border-t border-slate-100 flex flex-col xs:flex-row xs:items-center justify-between gap-1">
+            <div className="flex-shrink-0">
               {renderGeneralDiffBadge(diffTB, 'cm', 'text-blue-700')}
-              {prev && <span className="text-[9px] text-slate-400">bln lalu: {prev.tb} cm</span>}
             </div>
+            {prev && (
+              <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                bln lalu: <strong className="text-slate-600 font-semibold">{prev.tb} cm</strong>
+              </span>
+            )}
           </div>
         </div>
 
         {/* 3. Lingkar Kepala (LK) */}
-        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-emerald-200/80 shadow-xs flex flex-col justify-between space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1">
-              <CircleDot className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Lingkar Kepala</span>
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-emerald-200/80 shadow-xs flex flex-col justify-between min-h-[148px]">
+          {/* Header Card */}
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <CircleDot className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+              <span className="truncate">Lingkar Kepala</span>
             </span>
-            <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex-shrink-0 whitespace-nowrap">
               {latest.lk || '-'} cm
             </span>
           </div>
-          <div className="mt-2">
+
+          {/* Nilai Besar */}
+          <div className="my-1.5">
             <div className="flex items-baseline gap-1">
-              <span className="text-xl font-black text-slate-900">{latest.lk || '-'}</span>
-              <span className="text-xs text-slate-500 font-semibold">cm</span>
+              <span className="text-2xl font-black text-slate-900 leading-none">{latest.lk || '-'}</span>
+              <span className="text-xs text-slate-500 font-bold">cm</span>
             </div>
-            <div className="mt-1.5 flex items-center justify-between flex-wrap gap-1">
+          </div>
+
+          {/* Footer Card */}
+          <div className="pt-1.5 border-t border-slate-100 flex flex-col xs:flex-row xs:items-center justify-between gap-1">
+            <div className="flex-shrink-0">
               {renderGeneralDiffBadge(diffLK, 'cm', 'text-emerald-700')}
-              {prev && <span className="text-[9px] text-slate-400">bln lalu: {prev.lk} cm</span>}
             </div>
+            {prev && (
+              <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                bln lalu: <strong className="text-slate-600 font-semibold">{prev.lk || '-'} cm</strong>
+              </span>
+            )}
           </div>
         </div>
 
         {/* 4. Lingkar Lengan (LiLA) */}
-        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-purple-200/80 shadow-xs flex flex-col justify-between space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-purple-800 uppercase tracking-wider flex items-center gap-1">
-              <TrendingUp className="w-3.5 h-3.5 text-purple-600" />
-              <span>Lingkar Lengan</span>
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-purple-200/80 shadow-xs flex flex-col justify-between min-h-[148px]">
+          {/* Header Card */}
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] font-bold text-purple-800 uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <TrendingUp className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
+              <span className="truncate">Lingkar Lengan</span>
             </span>
-            <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">
+            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 flex-shrink-0 whitespace-nowrap">
               {latest.lila || '-'} cm
             </span>
           </div>
-          <div className="mt-2">
+
+          {/* Nilai Besar */}
+          <div className="my-1.5">
             <div className="flex items-baseline gap-1">
-              <span className="text-xl font-black text-slate-900">{latest.lila || '-'}</span>
-              <span className="text-xs text-slate-500 font-semibold">cm</span>
+              <span className="text-2xl font-black text-slate-900 leading-none">{latest.lila || '-'}</span>
+              <span className="text-xs text-slate-500 font-bold">cm</span>
             </div>
-            <div className="mt-1.5 flex items-center justify-between flex-wrap gap-1">
+          </div>
+
+          {/* Footer Card */}
+          <div className="pt-1.5 border-t border-slate-100 flex flex-col xs:flex-row xs:items-center justify-between gap-1">
+            <div className="flex-shrink-0">
               {renderGeneralDiffBadge(diffLila, 'cm', 'text-purple-700')}
-              {prev && <span className="text-[9px] text-slate-400">bln lalu: {prev.lila} cm</span>}
             </div>
+            {prev && (
+              <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                bln lalu: <strong className="text-slate-600 font-semibold">{prev.lila || '-'} cm</strong>
+              </span>
+            )}
           </div>
         </div>
       </div>
