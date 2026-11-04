@@ -1,7 +1,6 @@
 // src/components/EnterPage.jsx
 import React, { useState, useMemo } from 'react';
 import {
-  Baby,
   HeartHandshake,
   MapPin,
   Check,
@@ -336,17 +335,6 @@ export default function EnterPage({
               <span>Mulai Sekarang</span>
               <ArrowRight className="h-5 w-5 stroke-[2.75] transition-transform group-hover:translate-x-1" />
             </button>
-
-            {onOpenLogin && (
-              <button
-                type="button"
-                onClick={() => onOpenLogin('ortu')}
-                className="w-full min-h-[44px] rounded-full bg-white/90 hover:bg-white active:scale-[0.99] text-teal-800 border border-teal-200/80 font-bold text-xs px-4 py-2.5 shadow-2xs transition flex items-center justify-center gap-2"
-              >
-                <Baby className="w-4 h-4 text-teal-600" />
-                <span>Portal Orang Tua (Cek Data Anak)</span>
-              </button>
-            )}
 
             <p className="text-center text-[12px] font-medium text-slate-500">
               Teknologi Multi-Tenant ERP Cloud • Sains Data Telkom University

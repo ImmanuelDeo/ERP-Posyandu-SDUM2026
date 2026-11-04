@@ -23,13 +23,13 @@ function AppContent() {
   const [childIdForPerkembangan, setChildIdForPerkembangan] = useState(null);
 
   // Alur Autentikasi & Routing:
-  // 1. 'welcome'       : Halaman Awal Sambutan (Mulai Sekarang)
+  // 1. 'welcome'       : Halaman Awal Sambutan (Hanya ada tombol Mulai Sekarang)
   // 2. 'login'         : Pilihan Login Admin vs Login Orang Tua
   // 3. 'tenant_select' : Khusus Admin -> Pemilihan Stand/Cabang Posyandu
   // 4. 'app'           : Khusus Admin -> Dashboard Operasional Posyandu
-  // 5. 'ortu'          : Khusus Ortu  -> Langsung ke Interface Data Anaknya
+  // 5. 'ortu'          : Khusus Ortu  -> Langsung ke Interface Data Anaknya (Sinkron Real-Time)
   const [screen, setScreen] = useState('welcome');
-  const [ortuSession, setOrtuSession] = useState(null); // { child, tenant }
+  const [ortuSession, setOrtuSession] = useState(null); // { childId, tenantId, fallbackChild, fallbackTenant }
 
   const tenant = db?.[currentTenant];
 
@@ -52,11 +52,13 @@ function AppContent() {
     setScreen('tenant_select');
   };
 
-  // 2. Callback Login Orang Tua Berhasil -> Langsung ke Interface Data Anaknya
+  // 2. Callback Login Orang Tua Berhasil -> Langsung ke Interface Data Anaknya (Sinkron ke DB)
   const handleOrtuLoginSuccess = (matchedChild, matchedTenant) => {
     setOrtuSession({
-      child: matchedChild,
-      tenant: matchedTenant
+      childId: matchedChild.id,
+      tenantId: matchedTenant.id,
+      fallbackChild: matchedChild,
+      fallbackTenant: matchedTenant
     });
     setScreen('ortu');
   };
@@ -77,12 +79,18 @@ function AppContent() {
     );
   }
 
-  // TAMPILAN A: PORTAL KHUSUS ORANG TUA (VIEW ONLY ANAK SENDIRI)
+  // TAMPILAN A: PORTAL KHUSUS ORANG TUA (SINKRON TERHUBUNG DENGAN DATA ADMIN)
   if (screen === 'ortu' && ortuSession) {
+    // Ambil data reaktif teranyar dari db agar perubahan timbangan oleh admin otomatis sinkron
+    const liveTenant = db?.[ortuSession.tenantId] || ortuSession.fallbackTenant;
+    const liveChild =
+      liveTenant?.children?.find((c) => c.id === ortuSession.childId) ||
+      ortuSession.fallbackChild;
+
     return (
       <PortalOrtu
-        child={ortuSession.child}
-        tenant={ortuSession.tenant}
+        child={liveChild}
+        tenant={liveTenant}
         onLogout={handleLogout}
       />
     );
@@ -99,7 +107,7 @@ function AppContent() {
     );
   }
 
-  // TAMPILAN C1: WELCOME SCREEN (STEP 1)
+  // TAMPILAN C1: WELCOME SCREEN (STEP 1 - HANYA TOMBOL MULAI SEKARANG)
   if (screen === 'welcome') {
     return (
       <EnterPage
