@@ -191,6 +191,7 @@ export default function EnterPage({
   onEnterPosyandu,
   onRegisterPosyandu,
   onOpenLogin,
+  onOpenTentang,
   onBackToWelcome,
 }) {
   // 2-Step Flow State: 1 = Welcome Screen, 2 = Tenant Selector Dashboard
@@ -295,11 +296,36 @@ export default function EnterPage({
         <div className="relative z-10 mx-auto w-full max-w-[430px] md:max-w-5xl lg:max-w-6xl flex-1 flex flex-col md:flex-row md:items-center md:justify-between px-5 md:px-10 pt-8 pb-6 gap-8">
           {/* Kolom Kiri: Header Editorial, Sub-header, Deskripsi & Tombol CTA */}
           <div className="flex-1 flex flex-col justify-between md:justify-center md:space-y-6 text-left pt-2 sm:pt-4">
-            <header className="space-y-3">
-              {/* Pill Badge */}
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-teal-700/15 bg-teal-50/90 px-3.5 py-1 text-xs font-bold tracking-wider text-teal-800 uppercase shadow-xs">
-                <Sparkles className="h-3.5 w-3.5 text-teal-600" />
-                <span>Posyandu Digital • Purwokerto</span>
+            <header className="space-y-3.5">
+              {/* Baris Atas: Pill Badge & Logo Institusi di Atas Kanannya */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-teal-700/15 bg-teal-50/90 px-3.5 py-1 text-xs font-bold tracking-wider text-teal-800 uppercase shadow-xs">
+                  <Sparkles className="h-3.5 w-3.5 text-teal-600" />
+                  <span>Posyandu Digital</span>
+                </div>
+
+                {/* Diatas Kanannya: Logo Telkom University x S1 Sains Data & Akses Halaman Tentang */}
+                <div className="flex items-center gap-2">
+                  {onOpenTentang && (
+                    <button
+                      type="button"
+                      onClick={onOpenTentang}
+                      className="px-2.5 py-1 rounded-full bg-white/80 hover:bg-white text-teal-800 border border-teal-700/20 text-[11px] font-bold transition flex items-center gap-1 shadow-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-600/30"
+                      title="Tentang Posyandu Cerdas"
+                      aria-label="Tentang Posyandu Cerdas"
+                    >
+                      <Info className="w-3 h-3 text-teal-700" />
+                      <span>Tentang</span>
+                    </button>
+                  )}
+                  <div className="bg-white/85 backdrop-blur-xs px-2.5 py-1 rounded-xl border border-slate-200/80 shadow-xs flex items-center">
+                    <img
+                      src="/tup-x-s1ds.png.webp"
+                      alt="Logo Telkom University Purwokerto dan S1 Sains Data"
+                      className="h-6 sm:h-7 md:h-8 w-auto object-contain"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Sub-header & Judul Utama Fraunces */}
@@ -308,7 +334,7 @@ export default function EnterPage({
                   Selamat Datang di
                 </p>
                 <h1 className="font-serif text-[34px] sm:text-[38px] md:text-[46px] lg:text-[52px] leading-[1.12] font-bold text-teal-950 mt-1">
-                  ERP Posyandu Terpadu
+                  Posyandu Cerdas
                 </h1>
               </div>
 
@@ -436,7 +462,7 @@ export default function EnterPage({
             {/* Judul & Info Terpusat */}
             <div className="text-center pt-0.5">
               <h2 className="font-serif text-[24px] font-bold text-white leading-tight">
-                ERP Posyandu Terpadu
+                Posyandu Cerdas
               </h2>
               <p className="text-xs text-teal-100/90 mt-0.5">
                 Sistem Terpadu Pendataan Balita & Rekam Timbangan
