@@ -1,5 +1,5 @@
 // src/components/PortalOrtu.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Baby,
   Calendar,
@@ -7,7 +7,8 @@ import {
   MapPin,
   LogOut,
   Sparkles,
-  FileText
+  FileText,
+  Info
 } from 'lucide-react';
 import DualLineGrowthChart from './DualLineGrowthChart';
 import StandarKesehatanCard from './StandarKesehatanCard';
@@ -19,7 +20,10 @@ import StandarKesehatanCard from './StandarKesehatanCard';
  * - Tablet & Desktop (>= lg): Grid 2 kolom seimbang (kiri: profil & grafik, kanan: standar kemenkes & buku riwayat)
  *   sehingga memenuhi layar laptop secara proporsional tanpa ruang kosong berlebih.
  */
-export default function PortalOrtu({ child, tenant, onLogout }) {
+export default function PortalOrtu({ child, tenant, onLogout, onOpenTentang }) {
+  const [activeMeasurement, setActiveMeasurement] = useState(null);
+  const [activePrev, setActivePrev] = useState(null);
+
   if (!child) return null;
 
   const history = child.history || [];
@@ -32,6 +36,9 @@ export default function PortalOrtu({ child, tenant, onLogout }) {
     tgl: 'Terbaru'
   };
   const prev = history.length > 1 ? history[history.length - 2] : null;
+
+  const currentDisplay = activeMeasurement || latest;
+  const prevDisplay = activeMeasurement ? activePrev : prev;
 
   return (
     <div className="min-h-screen w-full bg-[#FCF9F4] text-slate-800 flex flex-col justify-between overflow-x-hidden antialiased">
@@ -57,15 +64,28 @@ export default function PortalOrtu({ child, tenant, onLogout }) {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onLogout}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 text-teal-100 text-xs font-bold transition flex-shrink-0 border border-white/20"
-            title="Keluar dari Portal Orang Tua"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Keluar</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenTentang && (
+              <button
+                type="button"
+                onClick={onOpenTentang}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 text-teal-100 text-xs font-bold transition flex-shrink-0 border border-white/20"
+                title="Tentang Posyandu Cerdas"
+              >
+                <Info className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Tentang</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 text-teal-100 text-xs font-bold transition flex-shrink-0 border border-white/20"
+              title="Keluar dari Portal Orang Tua"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Keluar</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -140,7 +160,14 @@ export default function PortalOrtu({ child, tenant, onLogout }) {
             </div>
 
             {/* Grafik KMS Standar Kemenkes TB & BB + 4 Kartu Perbandingan Lengkap */}
-            <DualLineGrowthChart history={history} child={child} />
+            <DualLineGrowthChart
+              history={history}
+              child={child}
+              onRecordChange={(cur, prevRec) => {
+                setActiveMeasurement(cur);
+                setActivePrev(prevRec);
+              }}
+            />
           </div>
 
           {/* KOLOM KANAN: Standar Kesehatan Kemenkes & Tabel Riwayat */}
@@ -148,8 +175,8 @@ export default function PortalOrtu({ child, tenant, onLogout }) {
             {/* Standar Kesehatan Anak Kemenkes */}
             <StandarKesehatanCard
               child={child}
-              currentMeasurement={latest}
-              prevMeasurement={prev}
+              currentMeasurement={currentDisplay}
+              prevMeasurement={prevDisplay}
             />
 
             {/* Riwayat Penimbangan Lengkap (Tabel) */}
@@ -197,7 +224,7 @@ export default function PortalOrtu({ child, tenant, onLogout }) {
 
       {/* Footer */}
       <footer className="text-center py-5 text-xs text-slate-500 border-t border-[#E8E2D5] bg-[#FCF9F4]">
-        Buku Kesehatan Ibu dan Anak Digital • ERP Posyandu SDUM 2026
+        Buku Kesehatan Ibu dan Anak Digital • Posyandu Cerdas SDUM 2026
       </footer>
     </div>
   );

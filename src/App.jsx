@@ -8,7 +8,8 @@ import InputUkur from './components/InputUkur';
 import EnterPage from './components/EnterPage';
 import LoginPage from './components/LoginPage';
 import PortalOrtu from './components/PortalOrtu';
-import { Home, BookOpen, TrendingUp, PlusCircle, LogOut } from 'lucide-react';
+import Tentang from './components/Tentang';
+import { Home, BookOpen, TrendingUp, PlusCircle, LogOut, Info } from 'lucide-react';
 
 function AppContent() {
   const {
@@ -28,8 +29,15 @@ function AppContent() {
   // 3. 'tenant_select' : Khusus Admin -> Pemilihan Stand/Cabang Posyandu
   // 4. 'app'           : Khusus Admin -> Dashboard Operasional Posyandu
   // 5. 'ortu'          : Khusus Ortu  -> Langsung ke Interface Data Anaknya (Sinkron Real-Time)
+  // 6. 'tentang'       : Halaman Informasi Tentang Web & Perancang Sistem
   const [screen, setScreen] = useState('welcome');
+  const [previousScreen, setPreviousScreen] = useState('welcome');
   const [ortuSession, setOrtuSession] = useState(null); // { childId, tenantId, fallbackChild, fallbackTenant }
+
+  const handleOpenTentang = (fromScreen = screen) => {
+    setPreviousScreen(fromScreen);
+    setScreen('tentang');
+  };
 
   const tenant = db?.[currentTenant];
 
@@ -73,9 +81,18 @@ function AppContent() {
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <div className="flex flex-col items-center gap-3 text-slate-600">
           <div className="w-10 h-10 border-4 border-posyandu-600 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-medium">Memuat sistem ERP Posyandu...</span>
+          <span className="text-sm font-medium">Memuat sistem Posyandu Cerdas...</span>
         </div>
       </div>
+    );
+  }
+
+  // TAMPILAN KHUSUS: HALAMAN TENTANG (BAHASA INDONESIA)
+  if (screen === 'tentang') {
+    return (
+      <Tentang
+        onBack={() => setScreen(previousScreen || 'welcome')}
+      />
     );
   }
 
@@ -92,6 +109,7 @@ function AppContent() {
         child={liveChild}
         tenant={liveTenant}
         onLogout={handleLogout}
+        onOpenTentang={() => handleOpenTentang('ortu')}
       />
     );
   }
@@ -113,6 +131,7 @@ function AppContent() {
       <EnterPage
         posyanduList={[]}
         onOpenLogin={() => setScreen('login')}
+        onOpenTentang={() => handleOpenTentang('welcome')}
       />
     );
   }
@@ -156,6 +175,7 @@ function AppContent() {
         onEnterPosyandu={handleEnterPosyandu}
         onRegisterPosyandu={handleRegisterPosyandu}
         onBackToWelcome={() => setScreen('login')}
+        onOpenTentang={() => handleOpenTentang('tenant_select')}
       />
     );
   }
@@ -186,7 +206,7 @@ function AppContent() {
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <h1 className="font-black text-xs sm:text-sm tracking-tight truncate leading-tight">
-                  {tenant?.title || 'Posyandu ERP'}
+                  {tenant?.title || 'Posyandu Cerdas'}
                 </h1>
                 <span className="bg-teal-500/30 text-teal-100 text-[8px] font-extrabold px-1.5 py-0.2 rounded border border-white/20 flex-shrink-0">
                   ERP
@@ -198,9 +218,19 @@ function AppContent() {
             </div>
           </div>
 
-          {/* Badge Petugas & Tombol Logout ke Layar Awal */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold text-teal-100 bg-white/10 border border-white/20 px-2.5 py-1 rounded-lg">
+          {/* Tombol Halaman Tentang, Badge Petugas & Tombol Logout ke Layar Awal */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              onClick={() => handleOpenTentang('app')}
+              className="p-1.5 sm:px-2.5 sm:py-1 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 text-teal-100 text-xs font-bold transition flex items-center gap-1.5 border border-white/20"
+              title="Tentang Posyandu Cerdas"
+              aria-label="Tentang Posyandu Cerdas"
+            >
+              <Info className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Tentang</span>
+            </button>
+            <span className="text-[10px] font-bold text-teal-100 bg-white/10 border border-white/20 px-2.5 py-1 rounded-lg hidden xs:inline-block">
               Admin Posyandu
             </span>
             <button
@@ -208,6 +238,7 @@ function AppContent() {
               onClick={handleLogout}
               className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 text-teal-100 text-xs font-bold transition flex items-center gap-1"
               title="Keluar / Logout Akun"
+              aria-label="Keluar / Logout Akun"
             >
               <LogOut className="w-3.5 h-3.5" />
             </button>

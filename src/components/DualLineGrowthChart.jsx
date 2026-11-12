@@ -1,5 +1,5 @@
 // src/components/DualLineGrowthChart.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   TrendingUp,
   ArrowUpRight,
@@ -7,7 +7,8 @@ import {
   Minus,
   Scale,
   Ruler,
-  CircleDot
+  CircleDot,
+  Calendar
 } from 'lucide-react';
 import { evaluateGrowthKMS, getKBM } from '../utils/kemenkesStandards';
 
@@ -48,9 +49,25 @@ const KMS_REF_DATA = {
   ]
 };
 
-export default function DualLineGrowthChart({ history = [], child = null }) {
+export default function DualLineGrowthChart({ history = [], child = null, onRecordChange = null }) {
   // Hanya ada 2 pilihan tab (tidak ada lagi opsi 'both' kedua grafik)
   const [activeTab, setActiveTab] = useState('bb'); // 'bb' | 'tb'
+
+  // State index rekaman pemeriksaan yang dipilih untuk 4 kartu metrik (default: index data terbaru)
+  const [selectedRecordIndex, setSelectedRecordIndex] = useState(
+    history && history.length > 0 ? history.length - 1 : 0
+  );
+
+  // Sinkronisasi otomatis ke rekaman terkini bila balita berganti atau riwayat diperbarui
+  useEffect(() => {
+    if (history && history.length > 0) {
+      const latestIdx = history.length - 1;
+      setSelectedRecordIndex(latestIdx);
+      if (onRecordChange) {
+        onRecordChange(history[latestIdx], latestIdx > 0 ? history[latestIdx - 1] : null);
+      }
+    }
+  }, [child?.id, history.length]);
 
   if (!history || history.length === 0) {
     return (
@@ -60,23 +77,34 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
     );
   }
 
-  const latest = history[history.length - 1];
-  const prev = history.length > 1 ? history[history.length - 2] : null;
+  const activeIndex = (selectedRecordIndex >= 0 && selectedRecordIndex < history.length)
+    ? selectedRecordIndex
+    : history.length - 1;
 
-  // 1. REVISI PERMINTAAN 1: Indikator kenaikan Berat Badan dalam satuan GRAM
-  const diffBBKg = prev ? Number((latest.bb - prev.bb).toFixed(2)) : 0;
+  const current = history[activeIndex] || history[history.length - 1];
+  const previous = activeIndex > 0 ? history[activeIndex - 1] : null;
+
+  const handleSelectRecord = (newIdx) => {
+    setSelectedRecordIndex(newIdx);
+    if (onRecordChange && history[newIdx]) {
+      onRecordChange(history[newIdx], newIdx > 0 ? history[newIdx - 1] : null);
+    }
+  };
+
+  // Indikator kenaikan Berat Badan dalam satuan GRAM
+  const diffBBKg = previous ? Number((current.bb - previous.bb).toFixed(2)) : 0;
   const diffBBGram = Math.round(diffBBKg * 1000); // Satuan gram
 
-  const diffTB = prev ? Number((latest.tb - prev.tb).toFixed(1)) : 0;
-  const diffLK = prev ? Number(((latest.lk || 0) - (prev.lk || 0)).toFixed(1)) : 0;
-  const diffLila = prev ? Number(((latest.lila || 0) - (prev.lila || 0)).toFixed(1)) : 0;
+  const diffTB = previous ? Number((current.tb - previous.tb).toFixed(1)) : 0;
+  const diffLK = previous ? Number(((current.lk || 0) - (previous.lk || 0)).toFixed(1)) : 0;
+  const diffLila = previous ? Number(((current.lila || 0) - (previous.lila || 0)).toFixed(1)) : 0;
 
-  const growthEval = evaluateGrowthKMS(latest.bb, prev?.bb, latest.usia);
+  const growthEval = evaluateGrowthKMS(current.bb, previous?.bb, current.usia);
   const isMale = (child?.gender || 'L').toUpperCase() === 'L';
 
   // Helper badge selisih umum
   const renderGeneralDiffBadge = (diff, unit, color = 'text-emerald-700') => {
-    if (!prev) return <span className="text-[10px] text-slate-400 font-medium">Awal</span>;
+    if (!previous) return <span className="text-[10px] text-slate-400 font-medium">Awal</span>;
     if (diff > 0) {
       return (
         <span className={`text-[11px] font-bold flex items-center gap-0.5 ${color}`}>
@@ -103,7 +131,7 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
 
   // Helper badge selisih Berat Badan (KHUSUS GRAM - Teks Bersih Seragam)
   const renderBBGramBadge = () => {
-    if (!prev) return <span className="text-[10px] text-slate-400 font-medium">Awal</span>;
+    if (!previous) return <span className="text-[10px] text-slate-400 font-medium">Awal</span>;
     if (diffBBGram > 0) {
       return (
         <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-0.5">
@@ -474,6 +502,41 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
 
   return (
     <div className="space-y-5">
+      {/* Dropdown Pemilihan Bulan / Periode Pemeriksaan untuk 4 Kartu Metrik */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-200/70 flex-shrink-0">
+            <Calendar className="w-4 h-4 text-teal-700" />
+          </div>
+          <div className="min-w-0">
+            <label htmlFor="select-periode-pemeriksaan" className="text-xs font-bold text-slate-800 block truncate">
+              Bulan Pemeriksaan Balita:
+            </label>
+            <p className="text-[11px] text-slate-500 truncate">
+              {activeIndex === history.length - 1 ? 'Menampilkan pemeriksaan terkini' : `Menampilkan riwayat tanggal ${current.tgl}`}
+            </p>
+          </div>
+        </div>
+
+        <div className="w-full sm:w-auto min-w-[230px]">
+          <select
+            id="select-periode-pemeriksaan"
+            value={activeIndex}
+            onChange={(e) => handleSelectRecord(Number(e.target.value))}
+            className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100/80 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition cursor-pointer"
+          >
+            {history.map((item, idx) => {
+              const isLatest = idx === history.length - 1;
+              return (
+                <option key={`opt-record-${idx}`} value={idx}>
+                  {item.tgl} (Usia: {item.usia} bln){isLatest ? ' • Terbaru' : ''}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+      </div>
+
       {/* Grid 4 Metrik Fisik (BB dengan GRAM, TB, LK, LiLA) — Sejajar & Proporsional */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 items-stretch">
         {/* 1. Berat Badan (BB) - Kenaikan dlm SATUAN GRAM */}
@@ -485,14 +548,14 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
               <span className="truncate">Berat Badan</span>
             </span>
             <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200 flex-shrink-0 whitespace-nowrap">
-              {latest.bb} kg
+              {current.bb} kg
             </span>
           </div>
 
           {/* Nilai Besar */}
           <div className="my-1.5">
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-black text-slate-900 leading-none">{latest.bb}</span>
+              <span className="text-2xl font-black text-slate-900 leading-none">{current.bb}</span>
               <span className="text-xs text-slate-500 font-bold">kg</span>
             </div>
           </div>
@@ -502,9 +565,13 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
             <div className="flex-shrink-0">
               {renderBBGramBadge()}
             </div>
-            {prev && (
+            {previous ? (
               <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
-                bln lalu: <strong className="text-slate-600 font-semibold">{prev.bb} kg</strong>
+                sebelumnya: <strong className="text-slate-600 font-semibold">{previous.bb} kg</strong>
+              </span>
+            ) : (
+              <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                pemeriksaan perdana
               </span>
             )}
           </div>
@@ -519,14 +586,14 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
               <span className="truncate">Tinggi Badan</span>
             </span>
             <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 flex-shrink-0 whitespace-nowrap">
-              {latest.tb} cm
+              {current.tb} cm
             </span>
           </div>
 
           {/* Nilai Besar */}
           <div className="my-1.5">
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-black text-slate-900 leading-none">{latest.tb}</span>
+              <span className="text-2xl font-black text-slate-900 leading-none">{current.tb}</span>
               <span className="text-xs text-slate-500 font-bold">cm</span>
             </div>
           </div>
@@ -536,9 +603,13 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
             <div className="flex-shrink-0">
               {renderGeneralDiffBadge(diffTB, 'cm', 'text-blue-700')}
             </div>
-            {prev && (
+            {previous ? (
               <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
-                bln lalu: <strong className="text-slate-600 font-semibold">{prev.tb} cm</strong>
+                sebelumnya: <strong className="text-slate-600 font-semibold">{previous.tb} cm</strong>
+              </span>
+            ) : (
+              <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                pemeriksaan perdana
               </span>
             )}
           </div>
@@ -553,14 +624,14 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
               <span className="truncate">Lingkar Kepala</span>
             </span>
             <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex-shrink-0 whitespace-nowrap">
-              {latest.lk || '-'} cm
+              {current.lk || '-'} cm
             </span>
           </div>
 
           {/* Nilai Besar */}
           <div className="my-1.5">
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-black text-slate-900 leading-none">{latest.lk || '-'}</span>
+              <span className="text-2xl font-black text-slate-900 leading-none">{current.lk || '-'}</span>
               <span className="text-xs text-slate-500 font-bold">cm</span>
             </div>
           </div>
@@ -570,9 +641,13 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
             <div className="flex-shrink-0">
               {renderGeneralDiffBadge(diffLK, 'cm', 'text-emerald-700')}
             </div>
-            {prev && (
+            {previous ? (
               <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
-                bln lalu: <strong className="text-slate-600 font-semibold">{prev.lk || '-'} cm</strong>
+                sebelumnya: <strong className="text-slate-600 font-semibold">{previous.lk || '-'} cm</strong>
+              </span>
+            ) : (
+              <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                pemeriksaan perdana
               </span>
             )}
           </div>
@@ -587,14 +662,14 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
               <span className="truncate">Lingkar Lengan</span>
             </span>
             <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 flex-shrink-0 whitespace-nowrap">
-              {latest.lila || '-'} cm
+              {current.lila || '-'} cm
             </span>
           </div>
 
           {/* Nilai Besar */}
           <div className="my-1.5">
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-black text-slate-900 leading-none">{latest.lila || '-'}</span>
+              <span className="text-2xl font-black text-slate-900 leading-none">{current.lila || '-'}</span>
               <span className="text-xs text-slate-500 font-bold">cm</span>
             </div>
           </div>
@@ -604,9 +679,13 @@ export default function DualLineGrowthChart({ history = [], child = null }) {
             <div className="flex-shrink-0">
               {renderGeneralDiffBadge(diffLila, 'cm', 'text-purple-700')}
             </div>
-            {prev && (
+            {previous ? (
               <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
-                bln lalu: <strong className="text-slate-600 font-semibold">{prev.lila || '-'} cm</strong>
+                sebelumnya: <strong className="text-slate-600 font-semibold">{previous.lila || '-'} cm</strong>
+              </span>
+            ) : (
+              <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                pemeriksaan perdana
               </span>
             )}
           </div>

@@ -15,7 +15,7 @@ export default function Header() {
         </div>
         <div>
           <h1 className="font-bold text-base tracking-tight leading-tight">
-            {tenant?.title || 'Posyandu ERP'}
+            {tenant?.title || 'Posyandu Cerdas'}
           </h1>
           <p className="text-[11px] text-teal-100/90 flex items-center gap-1.5 mt-0.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse" />

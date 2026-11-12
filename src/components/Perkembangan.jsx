@@ -12,19 +12,22 @@ import StandarKesehatanCard from './StandarKesehatanCard';
  */
 export default function Perkembangan({ initialChildId }) {
   const { getTenantData } = useAuth();
-  const [selectedChildId, setSelectedChildId] = useState(initialChildId || null);
-
   const currentTenantData = getTenantData();
   const children = currentTenantData?.children || [];
+  const [selectedChildId, setSelectedChildId] = useState(initialChildId || children[0]?.id || null);
+
+  const [activeRecord, setActiveRecord] = useState(null);
+  const [activePrevRecord, setActivePrevRecord] = useState(null);
+
   const selectedChild = children.find(c => c.id === selectedChildId) || children[0];
 
   useEffect(() => {
     if (initialChildId) {
       setSelectedChildId(initialChildId);
-    } else if (children.length > 0 && !selectedChildId) {
-      setSelectedChildId(children[0].id);
+      setActiveRecord(null);
+      setActivePrevRecord(null);
     }
-  }, [initialChildId, children, selectedChildId]);
+  }, [initialChildId]);
 
   if (!selectedChild) {
     return (
@@ -47,6 +50,15 @@ export default function Perkembangan({ initialChildId }) {
   };
   const prev = history.length > 1 ? history[history.length - 2] : null;
 
+  const currentMeasurement = activeRecord || latest;
+  const prevMeasurement = activeRecord ? activePrevRecord : prev;
+
+  const handleChildSelectChange = (newChildId) => {
+    setSelectedChildId(newChildId);
+    setActiveRecord(null);
+    setActivePrevRecord(null);
+  };
+
   return (
     <section className="space-y-6" id="perkembangan">
       {/* Grid 2 Kolom di Tablet & Desktop (>= lg) */}
@@ -65,7 +77,7 @@ export default function Perkembangan({ initialChildId }) {
             </div>
             <select
               value={selectedChildId || selectedChild.id}
-              onChange={(e) => setSelectedChildId(e.target.value)}
+              onChange={(e) => handleChildSelectChange(e.target.value)}
               className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs focus:outline-none focus:border-posyandu-600"
             >
               {children.map(c => (
@@ -95,14 +107,21 @@ export default function Perkembangan({ initialChildId }) {
             </div>
             <div className="text-right flex-shrink-0">
               <span className="text-xs font-black text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-xl block">
-                {latest.usia || selectedChild.usiaBulan} Bulan
+                {currentMeasurement.usia || selectedChild.usiaBulan} Bulan
               </span>
-              <span className="text-[10px] text-slate-400 mt-0.5 block">{latest.tgl}</span>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">{currentMeasurement.tgl}</span>
             </div>
           </div>
 
           {/* 1. Grafik Visual Standar KMS TB & BB + 4 Kartu Perbandingan Lengkap */}
-          <DualLineGrowthChart history={history} child={selectedChild} />
+          <DualLineGrowthChart
+            history={history}
+            child={selectedChild}
+            onRecordChange={(cur, prevRec) => {
+              setActiveRecord(cur);
+              setActivePrevRecord(prevRec);
+            }}
+          />
         </div>
 
         {/* KOLOM KANAN: Standar Kesehatan Kemenkes & Tabel Riwayat Pemeriksaan */}
@@ -110,8 +129,8 @@ export default function Perkembangan({ initialChildId }) {
           {/* 2. Grouping Kategori Standar Kesehatan Anak (Kemenkes RI Permenkes No. 2/2020) */}
           <StandarKesehatanCard
             child={selectedChild}
-            currentMeasurement={latest}
-            prevMeasurement={prev}
+            currentMeasurement={currentMeasurement}
+            prevMeasurement={prevMeasurement}
           />
 
           {/* 3. Riwayat Pemeriksaan Lengkap (Tabel) */}

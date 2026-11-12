@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt'],
       manifest: {
-        name: 'ERP Posyandu Arca',
-        short_name: 'ERP Posyandu',
+        name: 'Posyandu Cerdas',
+        short_name: 'Posyandu Cerdas',
         description: 'Sistem Informasi Posyandu Multi-Tenant dengan Automated Records',
         theme_color: '#0d9488',
         background_color: '#f8fafc',
