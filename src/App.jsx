@@ -9,7 +9,32 @@ import EnterPage from './components/EnterPage';
 import LoginPage from './components/LoginPage';
 import PortalOrtu from './components/PortalOrtu';
 import Tentang from './components/Tentang';
+import { logoutLocalAccount, resolveLocalParent, listPendingParents, matchesParentRequest, approveLocalParent } from './services/localAccounts';
 import { Home, BookOpen, TrendingUp, PlusCircle, LogOut, Info } from 'lucide-react';
+
+function ParentApproval({ db, tenantId }) {
+  const [revision, setRevision] = useState(0);
+  const [message, setMessage] = useState('');
+  let pending;
+  try { pending = listPendingParents(); } catch (err) { return <p role="alert">{err.message}</p>; }
+  if (!pending.length) return null;
+  return <section key={revision} className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-3">
+    <h2 className="font-bold">Verifikasi Akun Orang Tua (Lokal)</h2>
+    <p className="text-sm">Permintaan disimpan pada browser ini. Periksa identitas orang tua dan hubungan dengan anak secara langsung; kecocokan nama dan tanggal lahir saja bukan bukti. Setujui hanya setelah pemeriksaan. Perlindungan server belum aktif.</p>
+    {message && <p role="status">{message}</p>}
+    {pending.map((account) => {
+      const candidates = db?.[tenantId]?.children?.filter((child) => matchesParentRequest(account, child)) || [];
+      return <div key={account.id} className="p-3 bg-white border rounded-xl space-y-2">
+        <p className="text-sm"><strong>{account.username}</strong>: {account.motherName} / {account.childName} / {account.birthDate}</p>
+        {candidates.length === 1 ? <button type="button" className="min-h-11 px-3 bg-teal-700 text-white rounded-xl text-sm" onClick={() => {
+          if (!window.confirm('Identitas orang tua dan hubungan dengan anak sudah diperiksa langsung? Setujui tautan akun ini hanya jika pemeriksaan selesai.')) return;
+          try { approveLocalParent(account.id, tenantId, candidates[0].id, db); setRevision((value) => value + 1); setMessage('Akun terhubung. Orang tua dapat login kembali pada browser ini.'); }
+          catch (err) { setMessage(err.message); }
+        }}>Identitas Sudah Diperiksa — Hubungkan ke {candidates[0].nama}</button> : <p className="text-xs">Belum ada kecocokan tunggal di posyandu ini. Periksa posyandu, nama lengkap ibu/anak, tanggal lahir, dan duplikat. Tidak ada akses yang diberikan.</p>}
+      </div>;
+    })}
+  </section>;
+}
 
 function AppContent() {
   const {
@@ -61,17 +86,13 @@ function AppContent() {
   };
 
   // 2. Callback Login Orang Tua Berhasil -> Langsung ke Interface Data Anaknya (Sinkron ke DB)
-  const handleOrtuLoginSuccess = (matchedChild, matchedTenant) => {
-    setOrtuSession({
-      childId: matchedChild.id,
-      tenantId: matchedTenant.id,
-      fallbackChild: matchedChild,
-      fallbackTenant: matchedTenant
-    });
+  const handleOrtuLoginSuccess = (account) => {
+    setOrtuSession({ accountId: account.id });
     setScreen('ortu');
   };
 
   const handleLogout = () => {
+    logoutLocalAccount();
     setScreen('welcome');
     setOrtuSession(null);
   };
@@ -99,10 +120,10 @@ function AppContent() {
   // TAMPILAN A: PORTAL KHUSUS ORANG TUA (SINKRON TERHUBUNG DENGAN DATA ADMIN)
   if (screen === 'ortu' && ortuSession) {
     // Ambil data reaktif teranyar dari db agar perubahan timbangan oleh admin otomatis sinkron
-    const liveTenant = db?.[ortuSession.tenantId] || ortuSession.fallbackTenant;
-    const liveChild =
-      liveTenant?.children?.find((c) => c.id === ortuSession.childId) ||
-      ortuSession.fallbackChild;
+    let linked;
+    try { linked = resolveLocalParent(ortuSession.accountId, db); } catch { linked = null; }
+    if (!linked) return <div className="min-h-screen bg-[#FCF9F4] p-6 flex items-center justify-center"><section className="max-w-lg bg-white rounded-2xl border p-6 space-y-4"><h1 className="font-bold text-xl">Menunggu Verifikasi Kader</h1><p>Akun belum terhubung ke data anak yang valid. Temui kader untuk pemeriksaan identitas. Nama dan tanggal lahir saja tidak memberikan akses rekam medis.</p><p className="text-sm">Akun ini hanya tersedia pada browser ini. Perlindungan akses server belum aktif.</p><button type="button" onClick={handleLogout} className="min-h-11 px-4 bg-teal-700 text-white rounded-xl">Keluar</button></section></div>;
+    const { tenant: liveTenant, child: liveChild } = linked;
 
     return (
       <PortalOrtu
@@ -201,7 +222,7 @@ function AppContent() {
               className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 text-teal-200 transition flex-shrink-0"
               title="Ganti Stand Posyandu"
             >
-              <LogOut className="w-4 h-4" />
+              <span className="text-xs font-bold">Ganti Posyandu</span>
             </button>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
@@ -248,7 +269,7 @@ function AppContent() {
 
       {/* Main Content Area */}
       <main id="appMainScroll" className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-6 pb-32 overflow-y-auto no-scrollbar">
-        {activeTab === 'beranda' && <Beranda />}
+        {activeTab === 'beranda' && <><ParentApproval db={db} tenantId={currentTenant} /><Beranda /></>}
         {activeTab === 'buku-data' && (
           <BukuData
             onSelectChild={handleSelectChild}

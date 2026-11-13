@@ -139,16 +139,14 @@ export function loadLocalDB() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch (err) {
-    console.warn('Failed reading localStorage DB, resetting to defaults', err);
+    console.error('Data lokal tidak dapat dibaca; salinan lama tidak ditimpa.', err);
+    throw new Error('Data tersimpan tidak dapat dibaca. Hubungi pengelola sebelum melanjutkan.');
   }
   saveLocalDB(INITIAL_TENANTS);
   return INITIAL_TENANTS;
 }
 
 export function saveLocalDB(data) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch (err) {
-    console.error('Failed saving localStorage DB', err);
-  }
+  // Throw on quota/permission errors so callers never report a false success.
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }

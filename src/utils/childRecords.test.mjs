@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import { prepareChild, validateMeasurement, ageInMonths } from './childRecords.js';
+const input = { nama: 'Anak Uji', namaOrtu: 'Ibu Uji', gender: 'L', tglLahir: '2024-01-15', nik: '0012345678901234' };
+const child = prepareChild(input);
+assert.equal(child.nik, '0012345678901234');
+assert.equal(ageInMonths('2024-01-15', '2024-02-14'), 0);
+assert.equal(ageInMonths('2024-01-15', '2024-02-15'), 1);
+assert.throws(() => ageInMonths('2024-02-31', '2024-03-15'));
+assert.throws(() => prepareChild(input, [child]));
+assert.throws(() => prepareChild({ ...input, nik: '123' }));
+assert.throws(() => validateMeasurement(child, { tgl: '2024-02-15', bb: -1, tb: 60, lk: 40, lila: 12 }));
+assert.equal(validateMeasurement(child, { tgl: '2024-02-15', bb: 4, tb: 60, lk: 40, lila: 12 }).usia, 1);
+console.log('Child records: validation, duplicate identity, NIK preservation, calendar age checks passed.');

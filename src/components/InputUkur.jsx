@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Save, AlertCircle, CheckCircle2, ArrowRight, X } from 'lucide-react';
+import { ageInMonths } from '../utils/childRecords';
 import StandarKesehatanCard from './StandarKesehatanCard';
 
 /**
@@ -10,7 +11,7 @@ import StandarKesehatanCard from './StandarKesehatanCard';
  *   Grouping Kategori Standar Kesehatan Anak (Permenkes No. 2/2020) & indikator naik-turun.
  */
 export default function InputUkur({ onSuccess }) {
-  const { getTenantData, addMeasurement } = useAuth();
+  const { getTenantData, addMeasurement, addChild } = useAuth();
   const tenant = getTenantData();
 
   const [selectedChildId, setSelectedChildId] = useState(
@@ -24,6 +25,10 @@ export default function InputUkur({ onSuccess }) {
   const [lk, setLk] = useState('');
   const [lila, setLila] = useState('');
 
+  const [isNew, setIsNew] = useState(false);
+  const [identity, setIdentity] = useState({ nama: '', namaOrtu: '', tglLahir: '', gender: 'L', nik: '', telp: '', alamat: '' });
+  const [error, setError] = useState('');
+
   // State Modal Hasil Pemeriksaan Baru
   const [showResultModal, setShowResultModal] = useState(false);
   const [savedMeasurement, setSavedMeasurement] = useState(null);
@@ -32,12 +37,14 @@ export default function InputUkur({ onSuccess }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!selectedChildId || !bb || !tb || !lk || !lila) {
+    setError('');
+    try {
+    if ((!isNew && !selectedChildId) || !bb || !tb || !lk || !lila) {
       alert('Mohon isi semua field pengukuran fisik.');
       return;
     }
 
-    const currentChild = tenant?.children?.find((c) => c.id === selectedChildId);
+    let currentChild = isNew ? identity : tenant?.children?.find((c) => c.id === selectedChildId);
     const lastHistory = currentChild?.history?.[currentChild.history.length - 1] || null;
 
     const newMeas = {
@@ -46,13 +53,16 @@ export default function InputUkur({ onSuccess }) {
       tb: parseFloat(tb),
       lk: parseFloat(lk),
       lila: parseFloat(lila),
-      usia: (currentChild?.usiaBulan || 0) + 1
+      usia: ageInMonths(currentChild.tglLahir, examDate)
     };
 
-    const success = addMeasurement(selectedChildId, newMeas);
+    const success = isNew ? (currentChild = addChild(identity, newMeas)) : addMeasurement(selectedChildId, newMeas);
+    if (!success) throw new Error('Data tidak berhasil disimpan.');
 
     if (success) {
       setSavedChild(currentChild);
+      setSelectedChildId(currentChild.id);
+      setIsNew(false);
       setSavedMeasurement(newMeas);
       setSavedPrevMeasurement(lastHistory);
       setShowResultModal(true);
@@ -63,6 +73,7 @@ export default function InputUkur({ onSuccess }) {
       setLk('');
       setLila('');
     }
+    } catch (err) { setError(err.message || 'Penyimpanan gagal. Data belum disimpan.'); }
   };
 
   const handleCloseModal = () => {
@@ -82,8 +93,18 @@ export default function InputUkur({ onSuccess }) {
         </span>
       </div>
 
+      <div className="flex gap-3">
+        <button type="button" onClick={() => setIsNew(false)} aria-pressed={!isNew} className="min-h-12 px-4 rounded-xl border bg-white text-sm font-bold">Balita Terdaftar</button>
+        <button type="button" onClick={() => setIsNew(true)} aria-pressed={isNew} className="min-h-12 px-4 rounded-xl bg-teal-700 text-white text-sm font-bold">Tambah Balita Baru</button>
+      </div>
+      {error && <p role="alert" className="p-3 rounded-xl bg-rose-50 text-rose-800 text-sm">{error}</p>}
       {/* Form Input Selalu Aktif untuk Kader */}
       <form onSubmit={handleSubmit} className="space-y-3">
+        {isNew && <fieldset className="bg-white p-4 rounded-2xl border border-slate-200 grid sm:grid-cols-2 gap-4">
+          <legend className="font-bold text-sm px-2">Identitas Balita Baru</legend>
+          {[['nama', 'Nama lengkap anak', 'text'], ['namaOrtu', 'Nama ibu', 'text'], ['tglLahir', 'Tanggal lahir', 'date'], ['nik', 'NIK anak (opsional)', 'text'], ['telp', 'Telepon (opsional)', 'tel'], ['alamat', 'Alamat (opsional)', 'text']].map(([key, label, type]) => <label key={key} className="text-xs font-semibold space-y-2"><span>{label}</span><input type={type} required={['nama', 'namaOrtu', 'tglLahir'].includes(key)} maxLength={key === 'nik' ? 16 : key === 'alamat' ? 500 : 120} value={identity[key]} onChange={e => setIdentity({ ...identity, [key]: e.target.value })} className="block w-full min-h-12 px-3 border rounded-xl bg-slate-50" /></label>)}
+          <label className="text-xs font-semibold space-y-2"><span>Jenis kelamin</span><select value={identity.gender} onChange={e => setIdentity({ ...identity, gender: e.target.value })} className="block w-full min-h-12 px-3 border rounded-xl"><option value="L">Laki-laki</option><option value="P">Perempuan</option></select></label>
+        </fieldset>}
         {/* Child Selection & Exam Date - Responsive Grid 2 Kolom di Tablet/Desktop */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           {/* Child Selection */}
@@ -94,7 +115,8 @@ export default function InputUkur({ onSuccess }) {
             <select
               value={selectedChildId}
               onChange={(e) => setSelectedChildId(e.target.value)}
-              required
+              required={!isNew}
+              disabled={isNew}
               className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs focus:outline-none focus:border-posyandu-600"
             >
               {tenant?.children?.map((c) => (
@@ -230,7 +252,7 @@ export default function InputUkur({ onSuccess }) {
                     Hasil Analisis Standar Kesehatan Anak
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    Data berhasil disimpan untuk ananda <strong>{savedChild?.nama}</strong>
+                    Data tersimpan pada perangkat ini untuk ananda <strong>{savedChild?.nama}</strong>
                   </p>
                 </div>
               </div>

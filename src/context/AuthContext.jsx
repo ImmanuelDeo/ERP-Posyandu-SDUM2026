@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { loadLocalDB, saveLocalDB } from '../services/supabase';
+import { prepareChild, validateMeasurement } from '../utils/childRecords';
 
 const AuthContext = createContext(null);
 
@@ -29,15 +30,17 @@ export function AuthProvider({ children }) {
     return db?.[currentTenant] || null;
   }, [db, currentTenant]);
 
-  const addChild = useCallback((child) => {
-    if (!db) return false;
-    const newDb = { ...db };
-    newDb[currentTenant] = {
-      ...newDb[currentTenant],
-      children: [...newDb[currentTenant].children, { ...child, id: `local-${Date.now()}` }]
-    };
-    saveDb(newDb);
-    return true;
+  const addChild = useCallback((input, firstMeasurement = null) => {
+    if (!db?.[currentTenant]) throw new Error('Posyandu belum siap.');
+    const tenant = db[currentTenant];
+    const child = prepareChild(input, tenant.children);
+    if (firstMeasurement) {
+      const measurement = validateMeasurement(child, firstMeasurement);
+      child.history = [measurement];
+      Object.assign(child, measurement, { usiaBulan: measurement.usia });
+    }
+    saveDb({ ...db, [currentTenant]: { ...tenant, children: [...tenant.children, child] } });
+    return child;
   }, [db, currentTenant, saveDb]);
 
   const updateChild = useCallback((childId, updates) => {
@@ -73,12 +76,15 @@ export function AuthProvider({ children }) {
     const childIndex = tenant.children.findIndex(c => c.id === childId);
     if (childIndex === -1) return false;
     const child = { ...tenant.children[childIndex] };
-    child.history = [...child.history, { ...measurement, usia: child.usiaBulan + 1 }];
-    child.usiaBulan += 1;
-    child.bb = measurement.bb;
-    child.tb = measurement.tb;
-    child.lk = measurement.lk;
-    child.lila = measurement.lila;
+    const validated = validateMeasurement(child, measurement);
+    if (child.history.some(h => h.tgl === validated.tgl)) throw new Error('Pemeriksaan pada tanggal ini sudah ada.');
+    child.history = [...child.history, validated].sort((a, b) => a.tgl.localeCompare(b.tgl));
+    const latest = child.history.at(-1);
+    child.usiaBulan = latest.usia;
+    child.bb = latest.bb;
+    child.tb = latest.tb;
+    child.lk = latest.lk;
+    child.lila = latest.lila;
     newDb[currentTenant] = {
       ...newDb[currentTenant],
       children: tenant.children.map((c, i) => i === childIndex ? child : c)
