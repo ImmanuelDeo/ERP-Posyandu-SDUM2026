@@ -11,7 +11,7 @@ import StandarKesehatanCard from './StandarKesehatanCard';
  *   Grouping Kategori Standar Kesehatan Anak (Permenkes No. 2/2020) & indikator naik-turun.
  */
 export default function InputUkur({ onSuccess }) {
-  const { getTenantData, addMeasurement, addChild } = useAuth();
+  const { getTenantData, addMeasurement } = useAuth();
   const tenant = getTenantData();
 
   const [selectedChildId, setSelectedChildId] = useState(
@@ -25,8 +25,6 @@ export default function InputUkur({ onSuccess }) {
   const [lk, setLk] = useState('');
   const [lila, setLila] = useState('');
 
-  const [isNew, setIsNew] = useState(false);
-  const [identity, setIdentity] = useState({ nama: '', namaOrtu: '', tglLahir: '', gender: 'L', nik: '', telp: '', alamat: '' });
   const [error, setError] = useState('');
 
   // State Modal Hasil Pemeriksaan Baru
@@ -35,16 +33,27 @@ export default function InputUkur({ onSuccess }) {
   const [savedPrevMeasurement, setSavedPrevMeasurement] = useState(null);
   const [savedChild, setSavedChild] = useState(null);
 
+  if (!tenant?.children?.length) {
+    return (
+      <section className="max-w-4xl w-full mx-auto space-y-4" id="input-ukur">
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 text-center text-slate-400 text-xs">
+          Belum ada balita terdaftar. Daftarkan balita baru terlebih dahulu lewat menu <strong className="text-teal-800">Buku Data</strong>.
+        </div>
+      </section>
+    );
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
     try {
-    if ((!isNew && !selectedChildId) || !bb || !tb || !lk || !lila) {
+    if (!selectedChildId || !bb || !tb || !lk || !lila) {
       alert('Mohon isi semua field pengukuran fisik.');
       return;
     }
 
-    let currentChild = isNew ? identity : tenant?.children?.find((c) => c.id === selectedChildId);
+    const currentChild = tenant?.children?.find((c) => c.id === selectedChildId);
+    if (!currentChild) throw new Error('Balita tidak ditemukan.');
     const lastHistory = currentChild?.history?.[currentChild.history.length - 1] || null;
 
     const newMeas = {
@@ -56,13 +65,12 @@ export default function InputUkur({ onSuccess }) {
       usia: ageInMonths(currentChild.tglLahir, examDate)
     };
 
-    const success = isNew ? (currentChild = addChild(identity, newMeas)) : addMeasurement(selectedChildId, newMeas);
+    const success = addMeasurement(selectedChildId, newMeas);
     if (!success) throw new Error('Data tidak berhasil disimpan.');
 
     if (success) {
       setSavedChild(currentChild);
       setSelectedChildId(currentChild.id);
-      setIsNew(false);
       setSavedMeasurement(newMeas);
       setSavedPrevMeasurement(lastHistory);
       setShowResultModal(true);
@@ -94,20 +102,15 @@ export default function InputUkur({ onSuccess }) {
       </div>
 
       <div className="flex gap-3">
-        <button type="button" onClick={() => setIsNew(false)} aria-pressed={!isNew} className="min-h-12 px-4 rounded-xl border bg-white text-sm font-bold">Balita Terdaftar</button>
-        <button type="button" onClick={() => setIsNew(true)} aria-pressed={isNew} className="min-h-12 px-4 rounded-xl bg-teal-700 text-white text-sm font-bold">Tambah Balita Baru</button>
+        <span className="min-h-12 px-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-sm font-bold flex items-center gap-2">
+          Pemeriksaan Balita Terdaftar
+        </span>
       </div>
       {error && <p role="alert" className="p-3 rounded-xl bg-rose-50 text-rose-800 text-sm">{error}</p>}
       {/* Form Input Selalu Aktif untuk Kader */}
       <form onSubmit={handleSubmit} className="space-y-3">
-        {isNew && <fieldset className="bg-white p-4 rounded-2xl border border-slate-200 grid sm:grid-cols-2 gap-4">
-          <legend className="font-bold text-sm px-2">Identitas Balita Baru</legend>
-          {[['nama', 'Nama lengkap anak', 'text'], ['namaOrtu', 'Nama ibu', 'text'], ['tglLahir', 'Tanggal lahir', 'date'], ['nik', 'NIK anak (opsional)', 'text'], ['telp', 'Telepon (opsional)', 'tel'], ['alamat', 'Alamat (opsional)', 'text']].map(([key, label, type]) => <label key={key} className="text-xs font-semibold space-y-2"><span>{label}</span><input type={type} required={['nama', 'namaOrtu', 'tglLahir'].includes(key)} maxLength={key === 'nik' ? 16 : key === 'alamat' ? 500 : 120} value={identity[key]} onChange={e => setIdentity({ ...identity, [key]: e.target.value })} className="block w-full min-h-12 px-3 border rounded-xl bg-slate-50" /></label>)}
-          <label className="text-xs font-semibold space-y-2"><span>Jenis kelamin</span><select value={identity.gender} onChange={e => setIdentity({ ...identity, gender: e.target.value })} className="block w-full min-h-12 px-3 border rounded-xl"><option value="L">Laki-laki</option><option value="P">Perempuan</option></select></label>
-        </fieldset>}
         {/* Child Selection & Exam Date - Responsive Grid 2 Kolom di Tablet/Desktop */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          {/* Child Selection */}
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-1.5">
             <label className="block text-[11px] font-bold text-slate-800 uppercase tracking-wider">
               Pilih Nama Balita:
@@ -115,8 +118,7 @@ export default function InputUkur({ onSuccess }) {
             <select
               value={selectedChildId}
               onChange={(e) => setSelectedChildId(e.target.value)}
-              required={!isNew}
-              disabled={isNew}
+              required
               className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs focus:outline-none focus:border-posyandu-600"
             >
               {tenant?.children?.map((c) => (

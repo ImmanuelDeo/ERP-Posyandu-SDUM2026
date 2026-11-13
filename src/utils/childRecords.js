@@ -28,6 +28,7 @@ export function prepareChild(input, existing = []) {
   child.gender = input.gender;
   child.tglLahir = input.tglLahir;
   child.usiaBulan = ageInMonths(child.tglLahir, new Date().toISOString().slice(0, 10));
-  if (existing.some(c => (child.nik && c.nik === child.nik) || (c.nama?.toLowerCase() === child.nama.toLowerCase() && c.tglLahir === child.tglLahir && c.namaOrtu?.toLowerCase() === child.namaOrtu.toLowerCase()))) throw new Error('Data anak sudah terdaftar di posyandu ini.');
+  const duplicate = existing.find(c => (child.nik && c.nik === child.nik) || (c.nama?.toLowerCase() === child.nama.toLowerCase() && c.tglLahir === child.tglLahir && c.namaOrtu?.toLowerCase() === child.namaOrtu.toLowerCase()));
+  if (duplicate) throw new Error(`Data sudah terdaftar: ${duplicate.nama}, ibu ${duplicate.namaOrtu || '-'}. Gunakan tab "Balita Terdaftar" untuk input pengukuran, atau ubah identitas bila ini memang anak yang berbeda.`);
   return child;
 }

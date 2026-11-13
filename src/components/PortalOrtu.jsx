@@ -173,11 +173,17 @@ export default function PortalOrtu({ child, tenant, onLogout, onOpenTentang }) {
           {/* KOLOM KANAN: Standar Kesehatan Kemenkes & Tabel Riwayat */}
           <div className="lg:col-span-5 space-y-4">
             {/* Standar Kesehatan Anak Kemenkes */}
-            <StandarKesehatanCard
-              child={child}
-              currentMeasurement={currentDisplay}
-              prevMeasurement={prevDisplay}
-            />
+            {history.length === 0 ? (
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 text-center text-xs text-slate-400">
+                {child.nama} belum memiliki pengukuran. Kader posyandu akan mengisi pemeriksaan pertama pada jadwal penimbangan berikutnya.
+              </div>
+            ) : (
+              <StandarKesehatanCard
+                child={child}
+                currentMeasurement={currentDisplay}
+                prevMeasurement={prevDisplay}
+              />
+            )}
 
             {/* Riwayat Penimbangan Lengkap (Tabel) */}
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-3">
