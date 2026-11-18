@@ -15,6 +15,29 @@ export function validateMeasurement(child, measurement) {
   }
   return result;
 }
+// Derive cached fields from sorted history, never increment a cached age.
+export function withMeasurements(child, measurements) {
+  const history = [...(child.history || [])];
+  for (const measurement of measurements) {
+    const validated = validateMeasurement(child, measurement);
+    if (history.some(h => h.tgl === validated.tgl)) throw new Error('Pemeriksaan pada tanggal ini sudah ada.');
+    history.push(validated);
+  }
+  history.sort((a, b) => a.tgl.localeCompare(b.tgl));
+  const latest = history.at(-1);
+  return latest ? { ...child, ...latest, usiaBulan: latest.usia, history } : { ...child, history };
+}
+
+export function prepareImportedChildren(inputs, existing = []) {
+  const children = [...existing];
+  for (const input of inputs) {
+    const child = prepareChild(input, children);
+    if (!Array.isArray(input.history) || !input.history.length) throw new Error('Impor wajib berisi pemeriksaan.');
+    children.push(withMeasurements(child, input.history));
+  }
+  return children;
+}
+
 export function prepareChild(input, existing = []) {
   const child = { id: crypto.randomUUID(), history: [] };
   for (const key of ['nama', 'namaOrtu', 'nik', 'telp', 'alamat']) {

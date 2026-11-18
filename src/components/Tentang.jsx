@@ -163,12 +163,12 @@ export default function Tentang({ onBack }) {
 
               <div className="p-3 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                 <span className="text-slate-500 uppercase text-[10px] tracking-wider">Dosen Pembimbing:</span>
-                <span className="text-slate-700 italic sm:text-right font-medium">[Nama Dosen Pembimbing]</span>
+                <span className="text-slate-700 italic sm:text-right font-medium">Dian Kartika Sari</span>
               </div>
 
               <div className="p-3 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                 <span className="text-slate-500 uppercase text-[10px] tracking-wider">Tim Pengembang:</span>
-                <span className="text-slate-700 italic sm:text-right font-medium">[Nama Anggota Tim Pengembang]</span>
+                <span className="text-slate-700 italic sm:text-right font-medium">Mahasiswa Sains Data</span>
               </div>
 
               <div className="p-3 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-1">

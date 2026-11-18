@@ -1,8 +1,65 @@
 // Local prototype only: browser storage is editable, not a server authorization boundary.
 const KEY = 'erp_posyandu_accounts_v1';
 const ITERATIONS = 600000;
-let adminActive = false;
+let adminActive = null;
 let parentActive = null;
+const SESSION_KEY = 'erp_posyandu_session_v1';
+const SESSION_TTL = 8 * 60 * 60 * 1000;
+let activeSession = null;
+let adminCredential = null;
+const credential = (record) => JSON.stringify([record?.username, record?.salt, record?.hash, record?.iterations]);
+async function fingerprint(record) {
+  return hex(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(credential(record)))));
+}
+function saveSession(session) {
+  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(session)); }
+  catch { logoutLocalAccount(); throw new Error('Sesi lokal tidak dapat disimpan. Izinkan penyimpanan tab lalu login kembali.'); }
+  activeSession = session;
+}
+function validSession(session) {
+  const now = Date.now();
+  return session?.version === 1 && ['admin', 'parent'].includes(session.role) &&
+    typeof session.tenantId === 'string' && Boolean(session.tenantId) &&
+    Number.isSafeInteger(session.issuedAt) && Number.isSafeInteger(session.expiresAt) &&
+    session.issuedAt <= now && session.expiresAt > now &&
+    session.expiresAt > session.issuedAt && session.expiresAt - session.issuedAt <= SESSION_TTL;
+}
+function sessionActive() {
+  try {
+    if (validSession(activeSession) && sessionStorage.getItem(SESSION_KEY) === JSON.stringify(activeSession) &&
+      (!adminActive || credential(read().admin) === adminCredential)) return true;
+  } catch { /* Unreadable storage must not preserve access. */ }
+  logoutLocalAccount();
+  return false;
+}
+function newSession(role, tenantId) {
+  const issuedAt = Date.now();
+  return { version: 1, role, tenantId, issuedAt, expiresAt: issuedAt + SESSION_TTL };
+}
+export async function restoreLocalSession(db) {
+  adminActive = null;
+  parentActive = null;
+  activeSession = null;
+  adminCredential = null;
+  try {
+    const session = JSON.parse(sessionStorage.getItem(SESSION_KEY));
+    if (!validSession(session) || !Object.hasOwn(db || {}, session.tenantId) || !db[session.tenantId]) throw new Error('Invalid session');
+    if (session.role === 'admin') {
+      const record = read().admin;
+      if (!record || typeof session.fingerprint !== 'string' || !/^[a-f0-9]{64}$/.test(session.fingerprint) || session.fingerprint !== await fingerprint(record)) throw new Error('Stale credentials');
+      adminActive = session.tenantId;
+      adminCredential = credential(record);
+    } else {
+      if (typeof session.id !== 'string' || !session.id || typeof session.childId !== 'string' || !session.childId) throw new Error('Invalid parent');
+      const fields = identity(session);
+      if (uniqueChild(fields, session.tenantId, db)?.id !== session.childId) throw new Error('Stale child');
+      parentActive = session;
+    }
+    activeSession = session;
+    if (!sessionActive()) return null;
+    return session.role === 'admin' ? { role: 'admin', tenantId: session.tenantId } : { role: 'parent', id: session.id, tenantId: session.tenantId, childId: session.childId };
+  } catch { logoutLocalAccount(); return null; }
+}
 const normalize = (value) => String(value ?? '').normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('id-ID');
 const motherName = (value) => normalize(value).replace(/^(?:(?:ibu|mama|bunda|ny\.?)\s+)+/u, '');
 
@@ -15,7 +72,6 @@ function read() {
   }
   return data;
 }
-function save(data) { localStorage.setItem(KEY, JSON.stringify(data)); }
 function username(value) {
   const result = normalize(value);
   if (!/^[a-z0-9][a-z0-9._-]{2,59}$/.test(result)) throw new Error('Username harus 3–60 karakter: huruf, angka, titik, garis bawah, atau tanda hubung.');
@@ -31,37 +87,29 @@ async function derive(password, salt) {
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
   return hex(new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: new TextEncoder().encode(salt), iterations: ITERATIONS }, key, 256)));
 }
-async function credential(password) {
-  passwordInput(password);
-  const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
-  return { salt, hash: await derive(password, salt), iterations: ITERATIONS };
-}
 async function verify(password, record) {
   passwordInput(password);
   return record?.iterations === ITERATIONS && typeof record.salt === 'string' && record.salt.length === 32 && await derive(password, record.salt) === record.hash;
 }
-function requireAdmin() { if (!adminActive) throw new Error('Login pengelola lokal diperlukan.'); }
 export function hasLocalAdmin() { return Boolean(read().admin); }
-export function logoutLocalAccount() { adminActive = false; parentActive = null; }
-
-export async function setupLocalAdmin(name, password) {
-  const user = username(name);
-  if (read().admin) throw new Error('Akun pengelola lokal sudah tersedia.');
-  const secret = await credential(password);
-  const data = read();
-  if (data.admin) throw new Error('Akun pengelola lokal sudah tersedia.');
-  save({ ...data, admin: { username: user, ...secret } });
-  adminActive = true;
+export function logoutLocalAccount() {
+  adminActive = null; parentActive = null; activeSession = null; adminCredential = null;
+  try { sessionStorage.removeItem(SESSION_KEY); } catch { /* Access already revoked in memory. */ }
 }
-export async function loginLocalAdmin(name, password) {
-  adminActive = false;
+export function isLocalAdmin(tenantId) { return Boolean(tenantId && adminActive === tenantId && sessionActive()); }
+export async function loginLocalAdmin(name, password, tenantId, db) {
+  logoutLocalAccount();
   const data = read();
+  if (!data.admin) throw new Error('Admin belum diprovisikan. Hubungi operator untuk impor akun lokal dari scripts/provision-local-admin.mjs; pendaftaran publik tidak tersedia.');
   const user = username(name);
-  if (!data.admin || !(await verify(password, data.admin)) || user !== data.admin.username) throw new Error('Username atau password tidak sesuai.');
-  adminActive = true;
+  if (!Object.hasOwn(db || {}, tenantId) || !(await verify(password, data.admin)) || user !== data.admin.username) throw new Error('Posyandu, username, atau password tidak sesuai.');
+  const digest = await fingerprint(data.admin);
+  saveSession({ ...newSession('admin', tenantId), fingerprint: digest });
+  adminCredential = credential(data.admin);
+  adminActive = tenantId;
 }
-function registration(input) {
-  const result = { username: username(input.username) };
+function identity(input) {
+  const result = {};
   for (const field of ['motherName', 'childName']) {
     const value = String(input[field] ?? '').trim().replace(/\s+/g, ' ');
     if (value.length < 2 || value.length > 150 || !/\p{L}/u.test(value)) throw new Error('Nama ibu dan anak wajib diisi, 2–150 karakter.');
@@ -73,52 +121,39 @@ function registration(input) {
   result.birthDate = date;
   return result;
 }
-function publicAccount({ hash: _hash, salt: _salt, iterations: _iterations, ...account }) { return account; }
-
-export async function registerLocalParent(input, password) {
-  const fields = registration(input);
-  passwordInput(password);
-  const secret = await credential(password);
-  const data = read();
-  if (data.parents.some((p) => p.username === fields.username)) throw new Error('Username tidak tersedia.');
-  // Names and DOB are a review request, never proof of ownership or a database lookup at signup.
-  const account = { ...fields, ...secret, id: crypto.randomUUID(), status: 'pending', tenantId: null, childId: null };
-  save({ ...data, parents: [...data.parents, account] });
-  return publicAccount(account);
-}
-export async function loginLocalParent(name, password) {
-  parentActive = null;
-  const user = username(name);
-  const account = read().parents.find((p) => p.username === user);
-  if (!account || !(await verify(password, account))) throw new Error('Username atau password tidak sesuai.');
-  adminActive = false;
-  parentActive = account.id;
-  return publicAccount(account);
-}
-export function listPendingParents() {
-  requireAdmin();
-  return read().parents.filter((p) => p.status === 'pending').map(publicAccount);
-}
 export function matchesParentRequest(account, child) {
   return Boolean(motherName(account.motherName) && normalize(account.childName) &&
     motherName(account.motherName) === motherName(child.namaOrtu) &&
     normalize(account.childName) === normalize(child.nama) && account.birthDate === child.tglLahir);
 }
-export function approveLocalParent(accountId, tenantId, childId, db) {
-  requireAdmin();
-  const data = read();
-  const account = data.parents.find((p) => p.id === accountId && p.status === 'pending');
-  const candidates = db?.[tenantId]?.children?.filter((c) => account && matchesParentRequest(account, c)) || [];
-  if (!account || candidates.length !== 1 || candidates[0].id !== childId) throw new Error('Data tidak cocok tepat atau terdapat duplikat. Periksa identitas dan perbaiki data terlebih dahulu.');
-  if (data.parents.some((p) => p.status === 'approved' && p.tenantId === tenantId && p.childId === childId)) throw new Error('Anak sudah terhubung ke akun lain. Hubungi pengelola.');
-  save({ ...data, parents: data.parents.map((p) => p.id === accountId ? { ...p, status: 'approved', tenantId, childId } : p) });
+function uniqueChild(fields, tenantId, db) {
+  if (!Object.hasOwn(db || {}, tenantId)) return null;
+  const candidates = db[tenantId]?.children?.filter((child) => matchesParentRequest(fields, child)) || [];
+  return candidates.length === 1 && candidates[0].id ? candidates[0] : null;
 }
-export function resolveLocalParent(accountId, db) {
-  if (parentActive !== accountId) return null;
-  const account = read().parents.find((p) => p.id === accountId);
-  if (!account || account.status !== 'approved') return null;
-  const tenant = db?.[account.tenantId];
-  const child = tenant?.children?.find((c) => c.id === account.childId);
-  // No stale fallback: deleted or changed links cannot expose cached clinical records.
-  return child && matchesParentRequest(account, child) ? { child, tenant: { ...tenant, id: account.tenantId } } : null;
+export function loginLocalParent(input, tenantId, db) {
+  logoutLocalAccount();
+  const fields = identity(input);
+  const child = uniqueChild(fields, tenantId, db);
+  if (!child) throw new Error('Data tidak cocok tepat dengan satu anak di posyandu ini. Periksa nama lengkap, tanggal lahir, dan duplikat bersama kader.');
+  const session = { ...newSession('parent', tenantId), ...fields, id: crypto.randomUUID(), childId: child.id };
+  saveSession(session);
+  parentActive = session;
+  return { id: parentActive.id, tenantId, childId: child.id };
+}
+export function resolveLocalParent(sessionId, db) {
+  if (!parentActive || parentActive.id !== sessionId || !sessionActive()) return null;
+  const { tenantId, childId } = parentActive;
+  const child = uniqueChild(parentActive, tenantId, db);
+  return child?.id === childId ? { child, tenant: { ...db[tenantId], id: tenantId } } : null;
+}
+export function createLocalTenant(db, input) {
+  if (!isLocalAdmin(adminActive) || !Object.hasOwn(db || {}, adminActive)) throw new Error('Login pengelola lokal diperlukan untuk mendaftarkan posyandu.');
+  const title = String(input?.title ?? '').trim();
+  const district = String(input?.district ?? '').trim();
+  if (title.length < 2 || title.length > 150 || district.length > 300) throw new Error('Nama posyandu wajib 2–150 karakter; alamat maksimal 300 karakter.');
+  let key;
+  do { key = `pos-${crypto.randomUUID()}`; } while (Object.hasOwn(db, key));
+  // Ignore caller-supplied IDs and children: never overwrite or clone another tenant.
+  return { key, db: { ...db, [key]: { id: key, title, district, children: [] } } };
 }

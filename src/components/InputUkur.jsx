@@ -17,9 +17,12 @@ export default function InputUkur({ onSuccess }) {
   const [selectedChildId, setSelectedChildId] = useState(
     tenant?.children?.[0]?.id || ''
   );
-  const [examDate, setExamDate] = useState(
-    new Date().toISOString().slice(0, 10)
-  );
+  const activeChildId = tenant?.children?.some(c => c.id === selectedChildId)
+    ? selectedChildId : tenant?.children?.[0]?.id || '';
+  const [examDate, setExamDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  });
   const [bb, setBb] = useState('');
   const [tb, setTb] = useState('');
   const [lk, setLk] = useState('');
@@ -47,12 +50,11 @@ export default function InputUkur({ onSuccess }) {
     e.preventDefault();
     setError('');
     try {
-    if (!selectedChildId || !bb || !tb || !lk || !lila) {
-      alert('Mohon isi semua field pengukuran fisik.');
-      return;
+    if (!activeChildId || !bb || !tb || !lk || !lila) {
+      throw new Error('Pilih balita dan isi semua nilai pengukuran fisik.');
     }
 
-    const currentChild = tenant?.children?.find((c) => c.id === selectedChildId);
+    const currentChild = tenant?.children?.find((c) => c.id === activeChildId);
     if (!currentChild) throw new Error('Balita tidak ditemukan.');
     const lastHistory = currentChild?.history?.[currentChild.history.length - 1] || null;
 
@@ -65,7 +67,7 @@ export default function InputUkur({ onSuccess }) {
       usia: ageInMonths(currentChild.tglLahir, examDate)
     };
 
-    const success = addMeasurement(selectedChildId, newMeas);
+    const success = addMeasurement(activeChildId, newMeas);
     if (!success) throw new Error('Data tidak berhasil disimpan.');
 
     if (success) {
@@ -116,7 +118,7 @@ export default function InputUkur({ onSuccess }) {
               Pilih Nama Balita:
             </label>
             <select
-              value={selectedChildId}
+              value={activeChildId}
               onChange={(e) => setSelectedChildId(e.target.value)}
               required
               className="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 text-xs focus:outline-none focus:border-posyandu-600"
@@ -157,7 +159,7 @@ export default function InputUkur({ onSuccess }) {
               </label>
               <input
                 type="number"
-                step="0.05"
+                step="0.01"
                 min="1"
                 max="40"
                 placeholder="Contoh: 10.4"

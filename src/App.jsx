@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Beranda from './components/Beranda';
 import BukuData from './components/BukuData';
@@ -9,32 +9,8 @@ import EnterPage from './components/EnterPage';
 import LoginPage from './components/LoginPage';
 import PortalOrtu from './components/PortalOrtu';
 import Tentang from './components/Tentang';
-import { logoutLocalAccount, resolveLocalParent, listPendingParents, matchesParentRequest, approveLocalParent } from './services/localAccounts';
+import { logoutLocalAccount, resolveLocalParent, isLocalAdmin, restoreLocalSession } from './services/localAccounts';
 import { Home, BookOpen, TrendingUp, PlusCircle, LogOut, Info } from 'lucide-react';
-
-function ParentApproval({ db, tenantId }) {
-  const [revision, setRevision] = useState(0);
-  const [message, setMessage] = useState('');
-  let pending;
-  try { pending = listPendingParents(); } catch (err) { return <p role="alert">{err.message}</p>; }
-  if (!pending.length) return null;
-  return <section key={revision} className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-3">
-    <h2 className="font-bold">Verifikasi Akun Orang Tua (Lokal)</h2>
-    <p className="text-sm">Permintaan disimpan pada browser ini. Periksa identitas orang tua dan hubungan dengan anak secara langsung; kecocokan nama dan tanggal lahir saja bukan bukti. Setujui hanya setelah pemeriksaan. Perlindungan server belum aktif.</p>
-    {message && <p role="status">{message}</p>}
-    {pending.map((account) => {
-      const candidates = db?.[tenantId]?.children?.filter((child) => matchesParentRequest(account, child)) || [];
-      return <div key={account.id} className="p-3 bg-white border rounded-xl space-y-2">
-        <p className="text-sm"><strong>{account.username}</strong>: {account.motherName} / {account.childName} / {account.birthDate}</p>
-        {candidates.length === 1 ? <button type="button" className="min-h-11 px-3 bg-teal-700 text-white rounded-xl text-sm" onClick={() => {
-          if (!window.confirm('Identitas orang tua dan hubungan dengan anak sudah diperiksa langsung? Setujui tautan akun ini hanya jika pemeriksaan selesai.')) return;
-          try { approveLocalParent(account.id, tenantId, candidates[0].id, db); setRevision((value) => value + 1); setMessage('Akun terhubung. Orang tua dapat login kembali pada browser ini.'); }
-          catch (err) { setMessage(err.message); }
-        }}>Identitas Sudah Diperiksa — Hubungkan ke {candidates[0].nama}</button> : <p className="text-xs">Belum ada kecocokan tunggal di posyandu ini. Periksa posyandu, nama lengkap ibu/anak, tanggal lahir, dan duplikat. Tidak ada akses yang diberikan.</p>}
-      </div>;
-    })}
-  </section>;
-}
 
 function AppContent() {
   const {
@@ -56,6 +32,10 @@ function AppContent() {
   // 5. 'ortu'          : Khusus Ortu  -> Langsung ke Interface Data Anaknya (Sinkron Real-Time)
   // 6. 'tentang'       : Halaman Informasi Tentang Web & Perancang Sistem
   const [screen, setScreen] = useState('welcome');
+  const [sessionReady, setSessionReady] = useState(false);
+  const restoreStarted = useRef(false);
+  const [loginTenantId, setLoginTenantId] = useState(null);
+  const [tenantMessage, setTenantMessage] = useState('');
   const [previousScreen, setPreviousScreen] = useState('welcome');
   const [ortuSession, setOrtuSession] = useState(null); // { childId, tenantId, fallbackChild, fallbackTenant }
 
@@ -65,6 +45,21 @@ function AppContent() {
   };
 
   const tenant = db?.[currentTenant];
+
+  useEffect(() => {
+    if (!initialized || restoreStarted.current) return;
+    restoreStarted.current = true;
+    restoreLocalSession(db).then((session) => {
+      if (session?.role === 'admin') {
+        switchTenant(session.tenantId);
+        setScreen('app');
+      } else if (session?.role === 'parent') {
+        setOrtuSession({ accountId: session.id });
+        setScreen('ortu');
+      }
+      setSessionReady(true);
+    });
+  }, [initialized, db, switchTenant]);
 
   const handleSelectChild = (childId) => {
     setChildIdForPerkembangan(childId);
@@ -81,8 +76,10 @@ function AppContent() {
   };
 
   // 1. Callback Login Admin Berhasil -> Arahkan ke Pemilihan Posyandu / Stand
-  const handleAdminLoginSuccess = () => {
-    setScreen('tenant_select');
+  const handleAdminLoginSuccess = (tenantId) => {
+    switchTenant(tenantId);
+    setActiveTab('beranda');
+    setScreen('app');
   };
 
   // 2. Callback Login Orang Tua Berhasil -> Langsung ke Interface Data Anaknya (Sinkron ke DB)
@@ -94,10 +91,12 @@ function AppContent() {
   const handleLogout = () => {
     logoutLocalAccount();
     setScreen('welcome');
+    setLoginTenantId(null);
+    setTenantMessage('');
     setOrtuSession(null);
   };
 
-  if (!initialized) {
+  if (!initialized || !sessionReady) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <div className="flex flex-col items-center gap-3 text-slate-600">
@@ -122,16 +121,19 @@ function AppContent() {
     // Ambil data reaktif teranyar dari db agar perubahan timbangan oleh admin otomatis sinkron
     let linked;
     try { linked = resolveLocalParent(ortuSession.accountId, db); } catch { linked = null; }
-    if (!linked) return <div className="min-h-screen bg-[#FCF9F4] p-6 flex items-center justify-center"><section className="max-w-lg bg-white rounded-2xl border p-6 space-y-4"><h1 className="font-bold text-xl">Menunggu Verifikasi Kader</h1><p>Akun belum terhubung ke data anak yang valid. Temui kader untuk pemeriksaan identitas. Nama dan tanggal lahir saja tidak memberikan akses rekam medis.</p><p className="text-sm">Akun ini hanya tersedia pada browser ini. Perlindungan akses server belum aktif.</p><button type="button" onClick={handleLogout} className="min-h-11 px-4 bg-teal-700 text-white rounded-xl">Keluar</button></section></div>;
+    if (!linked) return <div className="min-h-screen p-6"><h1>Data anak tidak lagi cocok tunggal</h1><p>Data berubah, dihapus, atau ganda. Login ulang dengan data utama terbaru. Nama dan tanggal lahir bukan bukti identitas aman; prototipe lokal ini bukan untuk produksi.</p><button type="button" onClick={handleLogout}>Keluar</button></div>;
     const { tenant: liveTenant, child: liveChild } = linked;
 
     return (
-      <PortalOrtu
-        child={liveChild}
-        tenant={liveTenant}
-        onLogout={handleLogout}
-        onOpenTentang={() => handleOpenTentang('ortu')}
-      />
+      <>
+        <p role="note" className="bg-amber-50 border-b border-amber-200 p-3 text-xs text-amber-950">Prototipe lokal: nama dan tanggal lahir bukan bukti identitas yang aman. Pengguna perangkat dapat mengubah penyimpanan browser. Bukan perlindungan akses produksi; jangan gunakan data pasien asli.</p>
+        <PortalOrtu
+          child={liveChild}
+          tenant={liveTenant}
+          onLogout={handleLogout}
+          onOpenTentang={() => handleOpenTentang('ortu')}
+        />
+      </>
     );
   }
 
@@ -139,6 +141,8 @@ function AppContent() {
   if (screen === 'login') {
     return (
       <LoginPage
+        db={db}
+        targetTenantId={loginTenantId}
         onAdminLoginSuccess={handleAdminLoginSuccess}
         onOrtuLoginSuccess={handleOrtuLoginSuccess}
         onBackToWelcome={() => setScreen('welcome')}
@@ -151,7 +155,7 @@ function AppContent() {
     return (
       <EnterPage
         posyanduList={[]}
-        onOpenLogin={() => setScreen('login')}
+        onOpenLogin={() => { setLoginTenantId(null); setScreen('login'); }}
         onOpenTentang={() => handleOpenTentang('welcome')}
       />
     );
@@ -170,36 +174,37 @@ function AppContent() {
       : [];
 
     const handleEnterPosyandu = (selectedItem) => {
-      if (selectedItem?.id) {
-        switchTenant(selectedItem.id);
-      }
-      setScreen('app');
+      logoutLocalAccount();
+      setLoginTenantId(selectedItem?.id || null);
+      setScreen('login');
     };
 
     const handleRegisterPosyandu = (createdItem) => {
-      const key = createdItem.nama.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 20) || `pos-${Date.now()}`;
-      const createdKey = addTenant({
-        id: key,
-        title: createdItem.nama,
-        district: createdItem.alamat || 'Kabupaten Banyumas',
-        children: []
-      });
-      switchTenant(createdKey);
-      setScreen('app');
+      try {
+        const createdKey = addTenant({ title: createdItem.nama, district: createdItem.alamat || '' });
+        logoutLocalAccount();
+        setLoginTenantId(createdKey);
+        setScreen('login');
+      } catch (err) { setTenantMessage(err.message); }
     };
 
     return (
+      <>
+      {tenantMessage && <p role="alert" className="p-4 bg-amber-50">{tenantMessage}</p>}
       <EnterPage
         initialStep={2}
         posyanduList={posyanduList}
         defaultSelectedId={currentTenant}
         onEnterPosyandu={handleEnterPosyandu}
-        onRegisterPosyandu={handleRegisterPosyandu}
+        onRegisterPosyandu={isLocalAdmin(currentTenant) ? handleRegisterPosyandu : undefined}
         onBackToWelcome={() => setScreen('login')}
         onOpenTentang={() => handleOpenTentang('tenant_select')}
       />
+      </>
     );
   }
+
+  if (!tenant || !isLocalAdmin(currentTenant)) return <LoginPage db={db} targetTenantId={currentTenant} onAdminLoginSuccess={handleAdminLoginSuccess} onOrtuLoginSuccess={handleOrtuLoginSuccess} onBackToWelcome={handleLogout} />;
 
   // TAMPILAN D: DASHBOARD UTAMA OPERASIONAL POSYANDU (ADMIN / KADER)
   const navItems = [
@@ -269,7 +274,7 @@ function AppContent() {
 
       {/* Main Content Area */}
       <main id="appMainScroll" className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 py-6 pb-32 overflow-y-auto no-scrollbar">
-        {activeTab === 'beranda' && <><ParentApproval db={db} tenantId={currentTenant} /><Beranda /></>}
+        {activeTab === 'beranda' && <Beranda />}
         {activeTab === 'buku-data' && (
           <BukuData
             onSelectChild={handleSelectChild}

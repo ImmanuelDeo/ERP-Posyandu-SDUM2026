@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx/xlsx.mjs';
 const { SSF } = XLSX;
-import { prepareChild, validateMeasurement } from './childRecords.js';
+import { prepareChild, validateMeasurement, withMeasurements } from './childRecords.js';
 
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
 export const MAX_ROWS = 5000;
@@ -63,30 +63,65 @@ export function parseWorkbook(bytes, existing = []) {
   });
   if (!children.size) throw new Error('File kosong.');
   return [...children.values()].map(child => {
-    child.history.sort((a, b) => a.tgl.localeCompare(b.tgl));
-    const latest = child.history.at(-1);
-    return { ...child, bb: latest.bb, tb: latest.tb, lk: latest.lk, lila: latest.lila };
+    return withMeasurements({ ...child, history: [] }, child.history);
   });
 }
 
 export const HEADERS = ['NIK', 'Nama Anak', 'Jenis Kelamin', 'Tanggal Lahir', 'Nama Orang Tua', 'No HP', 'Alamat', 'Tanggal Pemeriksaan', 'Usia Bulan', 'BB (kg)', 'TB (cm)', 'LK (cm)', 'LiLA (cm)'];
 
-export function examinationRows(children, month = '', query = '', gender = 'ALL') {
+function validDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value) || value.startsWith('0000-')) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+export function examinationRange(filter = '') {
+  if (typeof filter === 'string') {
+    if (!filter) return { from: '', to: '' };
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(filter) || filter.startsWith('0000-')) throw new Error('Bulan pemeriksaan tidak valid.');
+    const from = `${filter}-01`;
+    const end = new Date(`${from}T00:00:00Z`);
+    end.setUTCMonth(end.getUTCMonth() + 1, 0);
+    return { from, to: `${filter}-${String(end.getUTCDate()).padStart(2, '0')}` };
+  }
+  const { from = '', to = '' } = filter;
+  if ((from && !validDate(from)) || (to && !validDate(to))) throw new Error('Tanggal pemeriksaan tidak valid. Gunakan tanggal lengkap tahun 0001–9999.');
+  if (from && to && from > to) throw new Error('Tanggal dari tidak boleh setelah tanggal sampai.');
+  return { from, to };
+}
+
+export function examinationFilename(tenantId, filter = '', query = '', gender = 'ALL') {
+  const { from, to } = examinationRange(filter);
+  const scope = from && to && from === to ? from : from || to ? `${from || 'awal'}_sampai_${to || 'akhir'}` : 'semua';
+  const tenant = String(tenantId || 'data').replace(/[^a-zA-Z0-9_-]/g, '_');
+  return `Data_Posyandu_${tenant}_${scope}${gender !== 'ALL' ? `_${gender}` : ''}${query.trim() ? '_pencarian' : ''}.xlsx`;
+}
+
+export function examinationRows(children, filter = '', query = '', gender = 'ALL') {
+  const { from, to } = examinationRange(filter);
   const search = query.trim().toLowerCase();
   return children.flatMap(child => {
     if ((gender !== 'ALL' && child.gender !== gender) ||
       !(String(child.nama || '').toLowerCase().includes(search) || String(child.nik || '').includes(search))) return [];
-    return (child.history || []).filter(measurement => /^\d{4}-\d{2}-\d{2}$/.test(measurement.tgl) &&
-      (!month || measurement.tgl.slice(0, 7) === month)).map(measurement => ({ child, measurement }));
-  }).sort((a, b) => b.measurement.tgl.localeCompare(a.measurement.tgl));
+    if (!from && !to && !child.history?.length) return [{ child, measurement: null }];
+    return (child.history || []).filter(measurement => validDate(measurement.tgl) &&
+      (!from || measurement.tgl >= from) && (!to || measurement.tgl <= to)).map(measurement => ({ child, measurement }));
+  }).sort((a, b) => (b.measurement?.tgl || '').localeCompare(a.measurement?.tgl || '') ||
+    String(a.child.id || a.child.nik || a.child.nama).localeCompare(String(b.child.id || b.child.nik || b.child.nama)));
 }
 
 export function createWorkbook(rows) {
   const data = rows.map(({ child, measurement }) => [String(child.nik || ''), child.nama, child.gender,
     child.tglLahir || '', child.namaOrtu || '', String(child.telp || ''), child.alamat || '',
-    measurement.tgl, measurement.usia ?? '', measurement.bb ?? '', measurement.tb ?? '', measurement.lk ?? '', measurement.lila ?? '']);
+    measurement?.tgl ?? '', measurement?.usia ?? '', measurement?.bb ?? '', measurement?.tb ?? '', measurement?.lk ?? '', measurement?.lila ?? '']);
   const sheet = XLSX.utils.aoa_to_sheet([HEADERS, ...data]);
-  sheet['!cols'] = HEADERS.map(() => ({ wch: 22 }));
+  sheet['!cols'] = [20, 32, 16, 18, 30, 20, 48, 22, 14, 12, 12, 12, 12].map(wch => ({ wch }));
+  sheet['!autofilter'] = { ref: sheet['!ref'] };
+  sheet['!rows'] = [{ hpt: 24 }];
+  // Keep identifiers as text; measurements remain numeric for Excel analysis.
+  rows.forEach((_, index) => {
+    for (const column of [0, 5]) sheet[XLSX.utils.encode_cell({ r: index + 1, c: column })].z = '@';
+  });
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, sheet, 'Pemeriksaan');
   return workbook;

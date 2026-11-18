@@ -14,13 +14,13 @@ import {
   UserPlus
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { examinationRows, createWorkbook, parseWorkbook, MAX_FILE_BYTES } from '../utils/spreadsheet';
+import { examinationRows, examinationFilename, createWorkbook, parseWorkbook, MAX_FILE_BYTES } from '../utils/spreadsheet';
 
 export default function BukuData({ onSelectChild }) {
   const { getTenantData, importChildren, addChild } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [genderFilter, setGenderFilter] = useState('ALL');
-  const [monthFilter, setMonthFilter] = useState('');
+  const [dateRange, setDateRange] = useState({ from: '', to: '' });
   const importRequest = useRef(0);
   const importTenant = useRef(null);
 
@@ -38,25 +38,18 @@ export default function BukuData({ onSelectChild }) {
 
   const tenant = getTenantData();
 
-  const filteredRows = useMemo(() => examinationRows(tenant?.children || [], monthFilter, searchQuery, genderFilter),
-    [tenant, monthFilter, searchQuery, genderFilter]);
-
-  // Daftar balita terdaftar (satu kartu per anak), termasuk yang belum pernah ditimbang
-  const childRows = useMemo(() => {
-    const search = searchQuery.trim().toLowerCase();
-    return (tenant?.children || [])
-      .filter(child => (genderFilter === 'ALL' || child.gender === genderFilter) &&
-        (String(child.nama || '').toLowerCase().includes(search) || String(child.nik || '').includes(search)))
-      .map(child => {
-        const measurements = (child.history || []).filter(measurement => /^\d{4}-\d{2}-\d{2}$/.test(measurement.tgl) &&
-          (!monthFilter || measurement.tgl.slice(0, 7) === monthFilter));
-        return { child, measurement: measurements.at(-1) || null };
-      })
-      .sort((a, b) => (b.measurement?.tgl || '').localeCompare(a.measurement?.tgl || ''));
-  }, [tenant, monthFilter, searchQuery, genderFilter]);
+  const { rows: filteredRows, filterError } = useMemo(() => {
+    try {
+      return { rows: examinationRows(tenant?.children || [], dateRange, searchQuery, genderFilter), filterError: '' };
+    } catch (error) {
+      return { rows: [], filterError: error.message };
+    }
+  }, [tenant, dateRange, searchQuery, genderFilter]);
+  const childCount = new Set(filteredRows.map(({ child }) => child.id || child.nik)).size;
 
   const handleExport = () => {
-    XLSX.writeFile(createWorkbook(filteredRows), `Data_Posyandu_${tenant?.id || 'data'}_${monthFilter || 'semua'}.xlsx`);
+    if (filterError || !filteredRows.length) return;
+    XLSX.writeFile(createWorkbook(filteredRows), examinationFilename(tenant?.id, dateRange, searchQuery, genderFilter));
   };
 
   const handleDownloadTemplate = () => {
@@ -102,7 +95,7 @@ export default function BukuData({ onSelectChild }) {
     try {
       if (importTenant.current !== tenant?.id) throw new Error('Posyandu berubah. Pilih ulang file.');
       const currentChildren = tenant?.children || [];
-      if (importPreview.some(child => currentChildren.some(c => c.nik === child.nik ||
+      if (importPreview.some(child => currentChildren.some(c => (child.nik && c.nik === child.nik) ||
         (c.nama?.toLowerCase() === child.nama.toLowerCase() && c.tglLahir === child.tglLahir && c.namaOrtu?.toLowerCase() === child.namaOrtu.toLowerCase())))) {
         throw new Error('Data anak sudah terdaftar. Pilih ulang file; tidak ada data disimpan.');
       }
@@ -121,7 +114,7 @@ export default function BukuData({ onSelectChild }) {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h2 className="text-base font-black text-slate-900 leading-tight">Buku Data Balita</h2>
-          <p className="text-[11px] text-slate-500">Riwayat pemeriksaan per bulan, dapat diekspor ke Excel</p>
+          <p className="text-[11px] text-slate-500">Satu baris per pemeriksaan; balita tanpa pemeriksaan tetap tampil bila tanggal tidak difilter. Tampilan dan Excel memakai filter yang sama.</p>
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
           <button
@@ -170,11 +163,15 @@ export default function BukuData({ onSelectChild }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <label htmlFor="examination-month" className="font-bold">Bulan pemeriksaan</label>
-        <input id="examination-month" type="month" value={monthFilter} onChange={e => setMonthFilter(e.target.value)} className="border border-slate-200 rounded-lg p-2 bg-white" />
-        <button type="button" onClick={() => setMonthFilter('')} className="underline">Semua bulan</button>
-        <span>{filteredRows.length} pemeriksaan • {childRows.length} balita</span>
+        <label htmlFor="examination-from" className="font-bold">Dari tanggal pemeriksaan</label>
+        <input id="examination-from" type="date" min="0001-01-01" max="9999-12-31" value={dateRange.from} aria-invalid={!!filterError} aria-describedby="examination-help examination-error" onChange={e => { setDateRange({ ...dateRange, from: e.target.value }); }} className="border border-slate-200 rounded-lg p-2 bg-white" />
+        <label htmlFor="examination-to" className="font-bold">Sampai tanggal</label>
+        <input id="examination-to" type="date" min="0001-01-01" max="9999-12-31" value={dateRange.to} aria-invalid={!!filterError} aria-describedby="examination-help examination-error" onChange={e => { setDateRange({ ...dateRange, to: e.target.value }); }} className="border border-slate-200 rounded-lg p-2 bg-white" />
+        <button type="button" onClick={() => { setDateRange({ from: '', to: '' }); setSearchQuery(''); setGenderFilter('ALL'); }} className="underline">Reset semua filter</button>
+        <span aria-live="polite">{filteredRows.filter(row => row.measurement).length} pemeriksaan • {childCount} balita</span>
       </div>
+      <p id="examination-help" className="text-[11px] text-slate-500">Kedua tanggal termasuk. Untuk satu hari, isi tanggal yang sama; untuk setahun, isi 1 Januari sampai 31 Desember. Batas kosong berarti tanpa batas tanggal tersebut. Jika salah satu tanggal diisi, balita tanpa pemeriksaan tidak ditampilkan dan tidak diekspor.</p>
+      <p id="examination-error" role={filterError ? 'alert' : undefined} className="text-xs text-rose-700">{filterError}</p>
       {/* Filter Tabs */}
       <div className="flex gap-1.5 overflow-x-auto pb-1 text-xs font-bold no-scrollbar">
         <button
@@ -211,15 +208,15 @@ export default function BukuData({ onSelectChild }) {
 
       {/* Child Cards List - Responsive Grid 1 / 2 / 3 Kolom */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
-        {childRows.length === 0 ? (
+        {filteredRows.length === 0 ? (
           <div className="bg-white p-6 rounded-2xl border border-slate-200 text-center text-slate-400 text-xs">
-            Tidak ada balita yang sesuai dengan filter.
+            {filterError ? 'Perbaiki rentang tanggal untuk melihat dan mengekspor data.' : 'Tidak ada data balita yang sesuai dengan filter.'}
           </div>
         ) : (
-          childRows.map(({ child, measurement: latest }) => {
+          filteredRows.map(({ child, measurement: latest }) => {
             return (
               <div
-                key={child.id}
+                key={`${child.id || child.nik}-${latest?.tgl || 'belum-ukur'}`}
                 role="button"
                 tabIndex={0}
                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectChild?.(child.id); } }}
@@ -263,7 +260,7 @@ export default function BukuData({ onSelectChild }) {
 
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span className="text-xs font-black text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">
-                    {child.usiaBulan ?? latest?.usia ?? '-'} bln
+                    {latest?.usia ?? '-'} bln
                   </span>
                   <ChevronRight className="w-4 h-4 text-slate-400" />
                 </div>

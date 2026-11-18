@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as XLSX from 'xlsx';
-import { examinationRows, createWorkbook, parseWorkbook, MAX_FILE_BYTES } from './spreadsheet.js';
+import { examinationRows, examinationRange, examinationFilename, createWorkbook, parseWorkbook, MAX_FILE_BYTES } from './spreadsheet.js';
 
 const headers = ['NIK', 'Nama Anak', 'Jenis Kelamin', 'Tanggal Lahir', 'Nama Orang Tua', 'No HP', 'Alamat', 'Tanggal Pemeriksaan', 'BB (kg)', 'TB (cm)', 'LK (cm)', 'LiLA (cm)'];
 const valid = ['0012345678901234', 'Anak', 'P', '2024-01-01', 'Ibu', '081234567890', 'RT 01', '2026-09-10', 9, 79, 44, 13];
@@ -48,6 +48,8 @@ const child = { nik: '0012345678901234', nama: 'Anak', gender: 'L', history: [
   { tgl: '2026-09-10', bb: 9, tb: 79, lk: 44, lila: 13, usia: 19 },
   { tgl: '2026-10-01', bb: 9.5, tb: 79.5, lk: 44, lila: 13, usia: 20 },
 ] };
+const exactDay = examinationRows([child], { from: '2026-10-01', to: '2026-10-01' });
+assert.deepEqual(exactDay.map(row => row.measurement.bb), [9.5]);
 const rows = examinationRows([child], '2026-09');
 assert.equal(rows.length, 1);
 assert.equal(rows[0].measurement.bb, 9);
@@ -63,4 +65,57 @@ const exported = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 assert.equal(exported[0]['BB (kg)'], 9);
 assert.equal(exported[0]['NIK'], child.nik);
 assert.equal(exported[0]['Tanggal Pemeriksaan'], '2026-09-10');
-console.log('Monthly filter and real XLSX export passed');
+assert.deepEqual(examinationRows([child], { from: '2026-09-10', to: '2026-10-01' }).map(row => row.measurement.bb), [9.5, 9]);
+assert.equal(examinationRows([child], { from: '2026-01-01', to: '2026-12-31' }).length, 3);
+assert.equal(examinationRows([child], { from: '2025-01-01', to: '2025-12-31' }).length, 0);
+assert.equal(examinationRows([child], { from: '2026-10-01' }).length, 2);
+assert.equal(examinationRows([child], { to: '2026-09-10' }).length, 1);
+assert.equal(examinationRows([child], {}).length, 3);
+assert.equal(examinationRows([child], {}, '  ANAK  ', 'L').length, 3);
+assert.equal(examinationRows([child], {}, child.nik, 'L').length, 3);
+for (const filter of [{ from: '2026-10-02', to: '2026-10-01' }, { from: '2026-02-29' }, { to: '2024-02-30' }, { from: '0000-01-01' }, { to: '10000-01-01' }, { from: '2026-1-01' }, '2026-13', '2026-00']) {
+  assert.throws(() => examinationRows([child], filter), /Tanggal|Bulan/);
+  assert.throws(() => examinationFilename('tenant', filter), /Tanggal|Bulan/);
+}
+const leapChild = { ...child, history: [{ tgl: '2024-02-28' }, { tgl: '2024-02-29' }, { tgl: '2024-03-01' }, { tgl: '2025-02-29' }] };
+assert.deepEqual(examinationRange('2024-02'), { from: '2024-02-01', to: '2024-02-29' });
+assert.deepEqual(examinationRange('2025-02'), { from: '2025-02-01', to: '2025-02-28' });
+assert.deepEqual(examinationRange('9999-12'), { from: '9999-12-01', to: '9999-12-31' });
+assert.equal(examinationRows([leapChild], { from: '2024-02-29', to: '2024-02-29' }).length, 1);
+assert.equal(examinationRows([leapChild], '2024-02').length, 2);
+assert.equal(examinationRows([leapChild]).length, 3);
+const multiRows = examinationRows(grouped, { from: '2026-09-10', to: '2026-10-01' });
+const multiBytes = XLSX.write(createWorkbook(multiRows), { type: 'buffer', bookType: 'xlsx' });
+const multiSheet = XLSX.read(multiBytes).Sheets.Pemeriksaan;
+assert.deepEqual(XLSX.utils.sheet_to_json(multiSheet).map(row => [row['Tanggal Pemeriksaan'], row['BB (kg)']]), multiRows.map(row => [row.measurement.tgl, row.measurement.bb]));
+const multiImported = parseWorkbook(multiBytes);
+assert.equal(multiImported.length, 1);
+assert.deepEqual(multiImported[0].history.map(row => [row.tgl, row.bb]), [['2026-09-10', 9], ['2026-10-01', 10]]);
+assert.equal(examinationFilename('tenant'), 'Data_Posyandu_tenant_semua.xlsx');
+assert.equal(examinationFilename('tenant', { from: '2024-02-29', to: '2024-02-29' }), 'Data_Posyandu_tenant_2024-02-29.xlsx');
+assert.equal(examinationFilename('tenant', '2024-02'), 'Data_Posyandu_tenant_2024-02-01_sampai_2024-02-29.xlsx');
+assert.equal(examinationFilename('tenant', { from: '2026-01-01', to: '2026-12-31' }, 'Anak', 'P'), 'Data_Posyandu_tenant_2026-01-01_sampai_2026-12-31_P_pencarian.xlsx');
+assert.equal(examinationFilename('../tenant', { to: '2026-09-10' }), 'Data_Posyandu____tenant_awal_sampai_2026-09-10.xlsx');
+assert.equal(examinationFilename('tenant', { from: '2026-09-10' }), 'Data_Posyandu_tenant_2026-09-10_sampai_akhir.xlsx');
+const emptyChild = { ...child, id: 'new-child', nama: 'Belum Ukur', history: [], bb: 99, usiaBulan: 99 };
+const allRows = examinationRows([emptyChild, child]);
+assert.equal(allRows.length, 4);
+assert.equal(allRows.at(-1).measurement, null);
+assert.equal(examinationRows([emptyChild], {}, 'belum', 'L').length, 1);
+assert.equal(examinationRows([emptyChild], {}, '', 'P').length, 0);
+for (const range of ['2026-10', { from: '2026-01-01' }, { to: '2026-12-31' }]) {
+  assert.equal(examinationRows([emptyChild], range).length, 0);
+}
+const emptyBytes = XLSX.write(createWorkbook(allRows), { type: 'buffer', bookType: 'xlsx' });
+const emptySheet = XLSX.read(emptyBytes).Sheets.Pemeriksaan;
+const emptyExport = XLSX.utils.sheet_to_json(emptySheet, { defval: '' });
+assert.equal(emptyExport.length, allRows.length);
+assert.equal(emptyExport.at(-1)['Nama Anak'], emptyChild.nama);
+for (const header of ['Tanggal Pemeriksaan', 'Usia Bulan', 'BB (kg)', 'TB (cm)', 'LK (cm)', 'LiLA (cm)']) {
+  assert.equal(emptyExport.at(-1)[header], '');
+}
+assert.equal(emptySheet.A5.t, 's');
+assert.equal(emptySheet.F5.t, 's');
+assert.equal(grouped[0].usiaBulan, grouped[0].history.at(-1).usia);
+assert.throws(() => parseWorkbook(emptyBytes), /Baris/); // Export never weakens strict measured-row imports.
+console.log('Day/month/year filters, empty identity rows, blank XLSX metrics, strict imports and roundtrip passed');

@@ -94,35 +94,25 @@ export default function Perkembangan({ initialChildId }) {
           <button
             type="button"
             onClick={() => setShowProfileModal(true)}
-            className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 text-left cursor-pointer hover:border-teal-300 hover:bg-teal-50/40 transition focus:outline-none focus:ring-2 focus:ring-teal-500/25"
+            className="w-full min-w-0 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-3 text-left cursor-pointer hover:border-teal-300 hover:bg-teal-50/40 transition focus:outline-none focus:ring-2 focus:ring-teal-500/25"
             title="Lihat detail identitas balita"
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm flex-shrink-0 ${
-                selectedChild.gender === 'L' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'
-              }`}>
-                {selectedChild.gender}
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-extrabold text-sm sm:text-base text-slate-900 truncate">
-                  {selectedChild.nama}
-                </h3>
-                <p className="text-xs text-slate-500 truncate mt-0.5">
-                  Ibu/Ortu: {selectedChild.namaOrtu} • NIK: {selectedChild.nik ? selectedChild.nik.slice(-4) : '-'}
-                </p>
-              </div>
-            </div>
-            <div className="text-right flex-shrink-0 flex items-center gap-2">
-              <div>
-                <span className="text-xs font-black text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-xl block">
-                  {currentMeasurement.usia || selectedChild.usiaBulan} Bulan
-                </span>
-                <span className="text-[10px] text-slate-400 mt-0.5 block">{currentMeasurement.tgl}</span>
-              </div>
-              <span className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center flex-shrink-0">
-                <IdCard className="w-4 h-4 text-slate-500" />
-              </span>
-            </div>
+            <span className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm ${selectedChild.gender === 'L' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
+              {selectedChild.gender}
+            </span>
+            <span className="min-w-0 space-y-1 block">
+              <span className="block font-extrabold text-sm sm:text-base leading-snug text-slate-900 break-words [overflow-wrap:anywhere]">{selectedChild.nama}</span>
+              <span className="block text-xs leading-relaxed text-slate-600 break-words [overflow-wrap:anywhere]">Ibu/Ortu: {selectedChild.namaOrtu}</span>
+              <span className="block text-xs text-slate-500">NIK: {selectedChild.nik ? `•••• ${selectedChild.nik.slice(-4)}` : 'Belum diisi'}</span>
+            </span>
+            <span className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center" aria-hidden="true">
+              <IdCard className="w-4 h-4 text-slate-500" />
+            </span>
+            <span className="col-span-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-slate-100 pt-3">
+              <span className="text-xs font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-xl">{currentMeasurement.usia ?? selectedChild.usiaBulan} Bulan</span>
+              <span className="text-xs text-slate-500 break-words">Pemeriksaan: {currentMeasurement.tgl}</span>
+              <span className="text-xs font-semibold text-teal-700">Lihat identitas lengkap</span>
+            </span>
           </button>
 
           {/* 1. Grafik Visual Standar KMS TB & BB + 4 Kartu Perbandingan Lengkap */}

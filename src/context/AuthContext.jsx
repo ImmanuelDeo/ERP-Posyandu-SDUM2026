@@ -1,22 +1,26 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { loadLocalDB, saveLocalDB } from '../services/supabase';
-import { prepareChild, validateMeasurement } from '../utils/childRecords';
+import { createLocalTenant } from '../services/localAccounts';
+import { prepareChild, withMeasurements, prepareImportedChildren } from '../utils/childRecords';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [currentTenant, setCurrentTenant] = useState('arca');
   const [db, setDb] = useState(null);
+  const dbRef = useRef(null);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     const dbData = loadLocalDB();
+    dbRef.current = dbData;
     setDb(dbData);
     setInitialized(true);
   }, []);
 
   const saveDb = useCallback((newDb) => {
     saveLocalDB(newDb);
+    dbRef.current = newDb;
     setDb(newDb);
   }, []);
 
@@ -31,21 +35,18 @@ export function AuthProvider({ children }) {
   }, [db, currentTenant]);
 
   const addChild = useCallback((input, firstMeasurement = null) => {
-    if (!db?.[currentTenant]) throw new Error('Posyandu belum siap.');
-    const tenant = db[currentTenant];
-    const child = prepareChild(input, tenant.children);
-    if (firstMeasurement) {
-      const measurement = validateMeasurement(child, firstMeasurement);
-      child.history = [measurement];
-      Object.assign(child, measurement, { usiaBulan: measurement.usia });
-    }
-    saveDb({ ...db, [currentTenant]: { ...tenant, children: [...tenant.children, child] } });
+    const latestDb = dbRef.current;
+    if (!latestDb?.[currentTenant]) throw new Error('Posyandu belum siap.');
+    const tenant = latestDb[currentTenant];
+    let child = prepareChild(input, tenant.children);
+    if (firstMeasurement) child = withMeasurements(child, [firstMeasurement]);
+    saveDb({ ...latestDb, [currentTenant]: { ...tenant, children: [...tenant.children, child] } });
     return child;
-  }, [db, currentTenant, saveDb]);
+  }, [currentTenant, saveDb]);
 
   const updateChild = useCallback((childId, updates) => {
-    if (!db) return false;
-    const newDb = { ...db };
+    if (!dbRef.current?.[currentTenant]) return false;
+    const newDb = { ...dbRef.current };
     const tenant = newDb[currentTenant];
     const childIndex = tenant.children.findIndex(c => c.id === childId);
     if (childIndex === -1) return false;
@@ -55,11 +56,11 @@ export function AuthProvider({ children }) {
     };
     saveDb(newDb);
     return true;
-  }, [db, currentTenant, saveDb]);
+  }, [currentTenant, saveDb]);
 
   const deleteChild = useCallback((childId) => {
-    if (!db) return false;
-    const newDb = { ...db };
+    if (!dbRef.current?.[currentTenant]) return false;
+    const newDb = { ...dbRef.current };
     const tenant = newDb[currentTenant];
     newDb[currentTenant] = {
       ...tenant,
@@ -67,31 +68,22 @@ export function AuthProvider({ children }) {
     };
     saveDb(newDb);
     return true;
-  }, [db, currentTenant, saveDb]);
+  }, [currentTenant, saveDb]);
 
   const addMeasurement = useCallback((childId, measurement) => {
-    if (!db) return false;
-    const newDb = { ...db };
+    if (!dbRef.current?.[currentTenant]) return false;
+    const newDb = { ...dbRef.current };
     const tenant = newDb[currentTenant];
     const childIndex = tenant.children.findIndex(c => c.id === childId);
     if (childIndex === -1) return false;
-    const child = { ...tenant.children[childIndex] };
-    const validated = validateMeasurement(child, measurement);
-    if (child.history.some(h => h.tgl === validated.tgl)) throw new Error('Pemeriksaan pada tanggal ini sudah ada.');
-    child.history = [...child.history, validated].sort((a, b) => a.tgl.localeCompare(b.tgl));
-    const latest = child.history.at(-1);
-    child.usiaBulan = latest.usia;
-    child.bb = latest.bb;
-    child.tb = latest.tb;
-    child.lk = latest.lk;
-    child.lila = latest.lila;
+    const child = withMeasurements(tenant.children[childIndex], [measurement]);
     newDb[currentTenant] = {
       ...newDb[currentTenant],
       children: tenant.children.map((c, i) => i === childIndex ? child : c)
     };
     saveDb(newDb);
     return true;
-  }, [db, currentTenant, saveDb]);
+  }, [currentTenant, saveDb]);
 
   const exportToCSV = useCallback(() => {
     const tenant = getTenantData();
@@ -107,65 +99,19 @@ export function AuthProvider({ children }) {
   }, [getTenantData]);
 
   const addTenant = useCallback((newTenant) => {
-    if (!db) return '';
-    const key = newTenant.id || `pos-${Date.now()}`;
-    const newDb = {
-      ...db,
-      [key]: {
-        id: key,
-        title: newTenant.title || 'Posyandu Baru',
-        district: newTenant.district || 'Kabupaten Banyumas',
-        children: newTenant.children || []
-      }
-    };
-    saveDb(newDb);
-    return key;
-  }, [db, saveDb]);
+    const created = createLocalTenant(dbRef.current, newTenant);
+    saveDb(created.db);
+    return created.key;
+  }, [saveDb]);
 
   const importChildren = useCallback((newChildrenList) => {
-    if (!db || !Array.isArray(newChildrenList) || newChildrenList.length === 0) return 0;
-    const newDb = { ...db };
-    const currentChildren = [...(newDb[currentTenant]?.children || [])];
-
-    let addedCount = 0;
-    newChildrenList.forEach((child) => {
-      // Cek apakah balita sudah ada berdasarkan NIK (jika ada NIK valid)
-      const existingIndex = child.nik ? currentChildren.findIndex(c => c.nik === child.nik) : -1;
-      if (existingIndex >= 0) {
-        // Gabungkan riwayat jika ada pengukuran baru
-        const existingChild = currentChildren[existingIndex];
-        const mergedHistory = [...(existingChild.history || [])];
-        if (child.history && child.history.length > 0) {
-          child.history.forEach(h => {
-            const isDup = mergedHistory.some(m => m.tgl === h.tgl);
-            if (!isDup) mergedHistory.push(h);
-          });
-        }
-        currentChildren[existingIndex] = {
-          ...existingChild,
-          ...child,
-          history: mergedHistory,
-          bb: child.bb || existingChild.bb,
-          tb: child.tb || existingChild.tb,
-          lk: child.lk || existingChild.lk,
-          lila: child.lila || existingChild.lila,
-        };
-      } else {
-        currentChildren.push({
-          ...child,
-          id: child.id || `import-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`
-        });
-      }
-      addedCount++;
-    });
-
-    newDb[currentTenant] = {
-      ...newDb[currentTenant],
-      children: currentChildren
-    };
-    saveDb(newDb);
-    return addedCount;
-  }, [db, currentTenant, saveDb]);
+    const latestDb = dbRef.current;
+    const tenant = latestDb?.[currentTenant];
+    if (!tenant || !Array.isArray(newChildrenList) || !newChildrenList.length) return 0;
+    const children = prepareImportedChildren(newChildrenList, tenant.children);
+    saveDb({ ...latestDb, [currentTenant]: { ...tenant, children } });
+    return newChildrenList.length;
+  }, [currentTenant, saveDb]);
 
   return (
     <AuthContext.Provider value={{
